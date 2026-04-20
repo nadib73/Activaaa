@@ -9,7 +9,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: const Color.fromARGB(255, 210, 220, 234),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
@@ -34,19 +34,11 @@ class OnboardingScreen extends StatelessWidget {
   }
 
   Widget _buildIconBox() {
-    return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.cardBorder, width: 1.5),
-      ),
-      child: const Icon(
-        Icons.check_box_outlined,
-        color: AppColors.teal,
-        size: 52,
-      ),
+    return Image.asset(
+      'assets/images/logo.png',
+      width: 180,
+      height: 180,
+      fit: BoxFit.contain,
     );
   }
 
@@ -55,7 +47,7 @@ class OnboardingScreen extends StatelessWidget {
       'Kenali Gaya Hidup\nDigitalmu',
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: AppColors.textPrimary,
+        color: Color.fromARGB(255, 9, 9, 9),
         fontSize: 28,
         fontWeight: FontWeight.w700,
         height: 1.25,
@@ -68,7 +60,7 @@ class OnboardingScreen extends StatelessWidget {
       'Analisis kebiasaan digital kamu\ndan dapatkan insight personal\nberbasis AI untuk produktivitas\nlebih baik.',
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: AppColors.textSecondary,
+        color: Color.fromARGB(255, 8, 10, 12),
         fontSize: 15,
         height: 1.6,
       ),

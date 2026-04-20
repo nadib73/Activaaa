@@ -1,95 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
-import '../models/analisis_data.dart';
+import '../providers/histori_provider.dart';
 import '../widgets/analisis_card.dart';
 import '../widgets/perkembangan_card.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
-class HistoriScreen extends StatelessWidget {
+class HistoriScreen extends ConsumerWidget {
   const HistoriScreen({super.key});
 
-  // ── Dummy Data ─────────────────────────────────────────────────────────────
-
-  static const _april = [
-    AnalisisData(
-      number: 8,
-      day: '07',
-      month: 'APR',
-      focus: 82,
-      prod: 75,
-      dep: 60,
-      depHigh: true,
-      note: 'Focus naik 5%',
-      noteColor: AppColors.teal,
-    ),
-    AnalisisData(
-      number: 7,
-      day: '01',
-      month: 'APR',
-      focus: 78,
-      prod: 70,
-      dep: 55,
-      depHigh: false,
-      note: 'Prod naik 3%',
-      noteColor: AppColors.teal,
-    ),
-  ];
-
-  static const _maret = [
-    AnalisisData(
-      number: 6,
-      day: '22',
-      month: 'MAR',
-      focus: 74,
-      prod: 68,
-      dep: 58,
-      depHigh: false,
-      note: 'Dep naik 8%',
-      noteColor: AppColors.amber,
-    ),
-    AnalisisData(
-      number: 5,
-      day: '15',
-      month: 'MAR',
-      focus: 70,
-      prod: 65,
-      dep: 50,
-      depHigh: false,
-    ),
-  ];
-
-  // ── Build ──────────────────────────────────────────────────────────────────
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(historiProvider);
+
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const PerkembanganCard(
-                      title: 'Perkembangan Diri',
-                      subtitle: 'Focus naik 15% dalam 30 hari terakhir',
-                    ),
-                    const SizedBox(height: 24),
-                    _buildMonthSection('APRIL 2025', _april),
-                    const SizedBox(height: 24),
-                    _buildMonthSection('MARET 2025', _maret),
-                    const SizedBox(height: 8),
-                    _buildLihatSemua(),
-                  ],
-                ),
-              ),
-            ),
+            Expanded(child: _buildBody(context, ref, state)),
             BottomNav(
               currentIndex: 1,
               navTheme: NavTheme.light,
@@ -123,7 +55,7 @@ class HistoriScreen extends StatelessWidget {
     }
   }
 
-  // ── Widgets ────────────────────────────────────────────────────────────────
+  // ── Header ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {
     return Container(
@@ -175,7 +107,71 @@ class HistoriScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMonthSection(String label, List<AnalisisData> items) {
+  // ── Body ───────────────────────────────────────────────────────────────────
+
+  Widget _buildBody(BuildContext context, WidgetRef ref, HistoriState state) {
+    // Loading state
+    if (state.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.teal),
+      );
+    }
+
+    // Error state
+    if (state.status == HistoriStatus.error) {
+      return _buildErrorState(ref, state.errorMessage ?? 'Terjadi kesalahan');
+    }
+
+    // Empty state
+    if (state.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // Success — tampilkan list
+    final grouped = state.groupedByMonth;
+
+    return RefreshIndicator(
+      color: AppColors.teal,
+      onRefresh: () => ref.read(historiProvider.notifier).refresh(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Perkembangan banner
+            _buildPerkembanganBanner(ref),
+            const SizedBox(height: 24),
+            // List per bulan
+            ...grouped.entries.map(
+              (entry) => _buildMonthSection(entry.key, entry.value),
+            ),
+            const SizedBox(height: 8),
+            _buildLihatSemua(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Perkembangan Banner ────────────────────────────────────────────────────
+
+  Widget _buildPerkembanganBanner(WidgetRef ref) {
+    final hasPerkembangan = ref.watch(hasPerkembanganProvider);
+    final focusChange = ref.watch(focusChangeProvider);
+
+    if (!hasPerkembangan) return const SizedBox.shrink();
+
+    final changeText = focusChange >= 0
+        ? 'Focus naik ${focusChange.toStringAsFixed(0)}% dalam 30 hari terakhir'
+        : 'Focus turun ${focusChange.abs().toStringAsFixed(0)}% dalam 30 hari terakhir';
+
+    return PerkembanganCard(title: 'Perkembangan Diri', subtitle: changeText);
+  }
+
+  // ── Month Section ──────────────────────────────────────────────────────────
+
+  Widget _buildMonthSection(String label, items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -190,9 +186,12 @@ class HistoriScreen extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         ...items.map((item) => AnalisisCard(data: item, onTap: () {})),
+        const SizedBox(height: 14),
       ],
     );
   }
+
+  // ── Lihat Semua ────────────────────────────────────────────────────────────
 
   Widget _buildLihatSemua() {
     return Center(
@@ -206,6 +205,69 @@ class HistoriScreen extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Empty State ────────────────────────────────────────────────────────────
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          const Text(
+            'Belum ada histori',
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Isi kuesioner untuk melihat hasil analisis',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Error State ────────────────────────────────────────────────────────────
+
+  Widget _buildErrorState(WidgetRef ref, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 48,
+            color: AppColors.red,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => ref.read(historiProvider.notifier).refresh(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.teal,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Coba Lagi'),
+          ),
+        ],
       ),
     );
   }

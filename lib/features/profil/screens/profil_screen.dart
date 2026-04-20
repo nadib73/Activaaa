@@ -1,73 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../widgets/stats_row.dart';
 import '../widgets/setting_item.dart';
 import '../widgets/setting_item_toggle.dart';
 import '../../histori/screens/histori_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
 
-class ProfilScreen extends StatefulWidget {
+class ProfilScreen extends ConsumerStatefulWidget {
   const ProfilScreen({super.key});
 
   @override
-  State<ProfilScreen> createState() => _ProfilScreenState();
+  ConsumerState<ProfilScreen> createState() => _ProfilScreenState();
 }
 
-class _ProfilScreenState extends State<ProfilScreen> {
+class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   bool _notifikasiEnabled = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgDark,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildProfileHeader(),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.bgLight,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(28),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const StatsRow(),
-                            const SizedBox(height: 24),
-                            _buildPengaturanSection(),
-                            const SizedBox(height: 20),
-                            _buildKeluarButton(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            BottomNav(
-              currentIndex: 3,
-              navTheme: NavTheme.light,
-              onTap: (i) => _onNavTap(context, i),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
-  void _onNavTap(BuildContext context, int index) {
+  void _onNavTap(int index) {
     switch (index) {
       case 0:
         Navigator.popUntil(context, (route) => route.isFirst);
@@ -87,36 +41,107 @@ class _ProfilScreenState extends State<ProfilScreen> {
     }
   }
 
+  // ── Logout ─────────────────────────────────────────────────────────────────
+
+  Future<void> _onLogout() async {
+    Navigator.pop(context); // tutup dialog
+    await ref.read(authProvider.notifier).logout();
+    // AuthGate di main.dart otomatis redirect ke OnboardingScreen
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    // Ambil data user dari provider
+    final user = ref.watch(currentUserProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.bgDark,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildProfileHeader(user),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: AppColors.bgLight,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            StatsRow(),
+                            const SizedBox(height: 24),
+                            _buildPengaturanSection(),
+                            const SizedBox(height: 20),
+                            _buildKeluarButton(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            BottomNav(
+              currentIndex: 3,
+              navTheme: NavTheme.light,
+              onTap: _onNavTap,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Profile Header ─────────────────────────────────────────────────────────
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(user) {
+    final name = user?.name ?? 'Pengguna';
+    final email = user?.email ?? '-';
+    final initials = user?.initials ?? '?';
+    final age = user?.age.toString() ?? '-';
+    final edu = user?.educationLevel ?? '-';
+    final region = user?.region ?? '-';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
       child: Column(
         children: [
-          _buildAvatar(),
+          _buildAvatar(initials),
           const SizedBox(height: 14),
-          const Text(
-            'Rizky Pratama',
-            style: TextStyle(
+          Text(
+            name,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'rizky@gmail.com',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          Text(
+            email,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 14),
-          _buildTags(),
+          _buildTags(age: age, edu: edu, region: region),
         ],
       ),
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(String initials) {
     return Container(
       width: 76,
       height: 76,
@@ -124,10 +149,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
         color: AppColors.teal,
         shape: BoxShape.circle,
       ),
-      child: const Center(
+      child: Center(
         child: Text(
-          'RP',
-          style: TextStyle(
+          initials,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 26,
             fontWeight: FontWeight.w800,
@@ -137,14 +162,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  Widget _buildTags() {
-    const tags = ['21 tahun', 'Mahasiswa', 'Asia', 'S1'];
-
+  Widget _buildTags({
+    required String age,
+    required String edu,
+    required String region,
+  }) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children: tags.map((tag) => _buildTag(tag)).toList(),
+      children: [_buildTag('$age tahun'), _buildTag(edu), _buildTag(region)],
     );
   }
 
@@ -245,7 +272,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
       width: double.infinity,
       height: 54,
       child: ElevatedButton(
-        onPressed: () => _showKeluarDialog(),
+        onPressed: _showKeluarDialog,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.red.withValues(alpha: 0.12),
           foregroundColor: AppColors.red,
@@ -287,7 +314,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _onLogout,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.red,
               foregroundColor: Colors.white,

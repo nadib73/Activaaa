@@ -1,38 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../providers/dashboard_provider.dart';
 import '../widgets/score_card.dart';
 import '../widgets/focus_bar_chart.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashState = ref.watch(dashboardProvider);
+    final user = ref.watch(currentUserProvider);
+    final analytics = dashState.analytics;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 20),
-                    _buildScoreCards(),
-                    const SizedBox(height: 16),
-                    _buildInsightCard(),
-                    const SizedBox(height: 20),
-                    _buildSectionLabel('TREN 7 HARI'),
-                    const SizedBox(height: 14),
-                    _buildFocusChartCard(),
-                  ],
+              child: RefreshIndicator(
+                color: AppColors.teal,
+                onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(user),
+                      const SizedBox(height: 20),
+                      // Loading state
+                      if (dashState.isLoading && analytics == null)
+                        _buildLoadingShimmer()
+                      else ...[
+                        _buildScoreCards(analytics),
+                        const SizedBox(height: 16),
+                        _buildInsightCard(analytics),
+                        const SizedBox(height: 20),
+                        _buildSectionLabel('TREN 7 HARI'),
+                        const SizedBox(height: 14),
+                        _buildFocusChartCard(analytics),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -68,23 +85,39 @@ class DashboardScreen extends StatelessWidget {
     }
   }
 
-  // ── Widgets ────────────────────────────────────────────────────────────────
+  // ── Header ─────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(user) {
+    final name = user?.name ?? 'Pengguna';
+    final initials = user?.initials ?? '?';
+
+    // Greeting berdasarkan jam
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Selamat pagi,'
+        : hour < 15
+        ? 'Selamat siang,'
+        : hour < 18
+        ? 'Selamat sore,'
+        : 'Selamat malam,';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
-              'Halo',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              greeting,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 2),
             Text(
-              'Rizky Pratama',
-              style: TextStyle(
+              name,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -92,12 +125,12 @@ class DashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-        const CircleAvatar(
+        CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.teal,
           child: Text(
-            'RP',
-            style: TextStyle(
+            initials,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 13,
@@ -108,19 +141,39 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreCards() {
+  // ── Score Cards ────────────────────────────────────────────────────────────
+
+  Widget _buildScoreCards(analytics) {
+    final focus = analytics?.avgFocus7Days != null
+        ? (analytics!.avgFocus7Days * 100).round().toString()
+        : '--';
+    final prod = analytics?.avgProductivity7Days != null
+        ? analytics!.avgProductivity7Days.round().toString()
+        : '--';
+    final dep = analytics?.avgDependence7Days != null
+        ? analytics!.avgDependence7Days.round().toString()
+        : '--';
+
     return Row(
-      children: const [
-        ScoreCard(label: 'Focus\nScore', value: '82', color: AppColors.teal),
-        SizedBox(width: 10),
-        ScoreCard(label: 'Produktivitas', value: '75', color: AppColors.amber),
-        SizedBox(width: 10),
-        ScoreCard(label: 'Dependensi', value: '60', color: AppColors.red),
+      children: [
+        ScoreCard(label: 'Focus\nScore', value: focus, color: AppColors.teal),
+        const SizedBox(width: 10),
+        ScoreCard(label: 'Produktivitas', value: prod, color: AppColors.amber),
+        const SizedBox(width: 10),
+        ScoreCard(label: 'Dependensi', value: dep, color: AppColors.red),
       ],
     );
   }
 
-  Widget _buildInsightCard() {
+  // ── Insight Card ───────────────────────────────────────────────────────────
+
+  Widget _buildInsightCard(analytics) {
+    final insightText =
+        analytics?.insightText ??
+        'Isi kuesioner untuk melihat insight pertamamu.';
+    final changeLabel = analytics?.focusChangeLabel ?? '';
+    final isPositive = (analytics?.focusChangePercentage ?? 0) > 0;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -137,41 +190,32 @@ class DashboardScreen extends StatelessWidget {
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-              ),
-              children: [
-                TextSpan(text: 'Focus score kamu '),
-                TextSpan(
-                  text: 'naik 12%',
-                  style: TextStyle(color: AppColors.tealLight),
-                ),
-                TextSpan(
-                  text:
-                      ' dibanding minggu lalu. Screen time turun 20 menit per hari.',
-                ),
-              ],
+          Text(
+            insightText,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 12),
-          _buildDependensiBadge(),
+          if (changeLabel.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildChangeBadge(changeLabel, isPositive),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDependensiBadge() {
+  Widget _buildChangeBadge(String label, bool isPositive) {
+    final color = isPositive ? AppColors.teal : AppColors.red;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.red.withValues(alpha: 0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -179,16 +223,13 @@ class DashboardScreen extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.red,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
-          const Text(
-            'Dependensi Digital Tinggi',
+          Text(
+            'Focus $label minggu ini',
             style: TextStyle(
-              color: AppColors.red,
+              color: color,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -197,6 +238,8 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── Section Label ──────────────────────────────────────────────────────────
 
   Widget _buildSectionLabel(String text) {
     return Text(
@@ -210,7 +253,11 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFocusChartCard() {
+  // ── Focus Chart ────────────────────────────────────────────────────────────
+
+  Widget _buildFocusChartCard(analytics) {
+    final changeLabel = analytics?.focusChangeLabel ?? '';
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -232,30 +279,63 @@ class DashboardScreen extends StatelessWidget {
                   fontSize: 15,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.teal.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '+12%',
-                  style: TextStyle(
-                    color: AppColors.tealLight,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+              if (changeLabel.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.teal.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    changeLabel,
+                    style: const TextStyle(
+                      color: AppColors.tealLight,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 18),
           const FocusBarChart(),
         ],
       ),
+    );
+  }
+
+  // ── Loading Shimmer ────────────────────────────────────────────────────────
+
+  Widget _buildLoadingShimmer() {
+    return Column(
+      children: [
+        Row(
+          children: List.generate(
+            3,
+            (_) => Expanded(
+              child: Container(
+                height: 72,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/auth_error_banner.dart';
 import '../widgets/auth_dropdown_field.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
+// Ganti false saat backend siap
+const bool _useMockRegister = true;
+
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _namaController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -21,8 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _gender = 'Male';
   String _pendidikan = 'Bachelor';
   String _region = 'Asia';
-
-  bool _isLoading = false;
 
   static const _genderOptions = ['Male', 'Female'];
   static const _pendidikanOptions = [
@@ -52,25 +56,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ── Logic ──────────────────────────────────────────────────────────────────
+  // ── Validasi ───────────────────────────────────────────────────────────────
 
   bool get _isFormValid {
-    return _namaController.text.isNotEmpty &&
+    return _namaController.text.trim().isNotEmpty &&
         _emailController.text.contains('@') &&
+        _emailController.text.contains('.') &&
         _passwordController.text.length >= 8 &&
         _passwordController.text == _konfirmasiController.text &&
-        _umurController.text.isNotEmpty;
+        _umurController.text.isNotEmpty &&
+        int.tryParse(_umurController.text) != null;
   }
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
   Future<void> _onRegister() async {
     if (!_isFormValid) return;
 
-    setState(() => _isLoading = true);
+    // Clear error sebelumnya
+    ref.read(authProvider.notifier).clearError();
 
-    // Simulasi network request
-    await Future.delayed(const Duration(seconds: 2));
+    bool success = false;
+    if (_useMockRegister) {
+      success = await ref
+          .read(authProvider.notifier)
+          .mockRegister(
+            name: _namaController.text.trim(),
+            email: _emailController.text.trim(),
+            age: int.parse(_umurController.text),
+            gender: _gender,
+            educationLevel: _pendidikan,
+            region: _region,
+          );
+    } else {
+      success = await ref
+          .read(authProvider.notifier)
+          .register(
+            name: _namaController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            passwordConfirmation: _konfirmasiController.text,
+            age: int.parse(_umurController.text),
+            gender: _gender,
+            educationLevel: _pendidikan,
+            region: _region,
+          );
+    }
 
-    if (mounted) {
+    // Navigasi manual ke Dashboard setelah register berhasil
+    if (success && mounted) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
@@ -83,6 +117,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final isLoading = authState.isLoading;
+    final errorMsg = authState.errorMessage;
+
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
@@ -95,6 +133,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Error banner
+                    if (errorMsg != null) ...[
+                      AuthErrorBanner(message: errorMsg),
+                      const SizedBox(height: 16),
+                    ],
                     _buildSectionLabel('INFORMASI AKUN'),
                     const SizedBox(height: 16),
                     _buildInfoAkunSection(),
@@ -103,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
                     _buildDataDiriSection(),
                     const SizedBox(height: 28),
-                    _buildRegisterButton(),
+                    _buildRegisterButton(isLoading),
                     const SizedBox(height: 20),
                     _buildLoginLink(),
                   ],
@@ -164,8 +207,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── Section Label ──────────────────────────────────────────────────────────
-
   Widget _buildSectionLabel(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -192,10 +233,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         AuthTextField(
           label: 'Nama Lengkap',
-          hint: 'Nama',
+          hint: 'Rizky Pratama',
           prefixIcon: Icons.person_outline_rounded,
           controller: _namaController,
-          isValid: _namaController.text.isNotEmpty,
+          isValid: _namaController.text.trim().isNotEmpty,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
@@ -253,10 +294,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: AuthTextField(
                 label: 'Umur',
                 hint: '21',
-                prefixIcon: Icons.add_rounded,
+                prefixIcon: Icons.cake_outlined,
                 controller: _umurController,
                 keyboardType: TextInputType.number,
-                isValid: _umurController.text.isNotEmpty,
+                isValid:
+                    _umurController.text.isNotEmpty &&
+                    int.tryParse(_umurController.text) != null,
                 onChanged: (_) => setState(() {}),
               ),
             ),
@@ -289,11 +332,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── Register Button ────────────────────────────────────────────────────────
+  // ── Tombol Register ────────────────────────────────────────────────────────
 
-  Widget _buildRegisterButton() {
-    final isEnabled = _isFormValid && !_isLoading;
-
+  Widget _buildRegisterButton(bool isLoading) {
+    final isEnabled = _isFormValid && !isLoading;
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -309,7 +351,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           elevation: 0,
         ),
-        child: _isLoading
+        child: isLoading
             ? const SizedBox(
                 width: 22,
                 height: 22,
@@ -332,8 +374,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
-  // ── Login Link ─────────────────────────────────────────────────────────────
 
   Widget _buildLoginLink() {
     return Center(
