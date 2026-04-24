@@ -5,6 +5,7 @@ import '../../../shared/widgets/bottom_nav.dart';
 import '../providers/histori_provider.dart';
 import '../widgets/analisis_card.dart';
 import '../widgets/perkembangan_card.dart';
+import '../models/analisis_data.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
@@ -185,7 +186,12 @@ class HistoriScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        ...items.map((item) => AnalisisCard(data: item, onTap: () {})),
+        ...items.map(
+          (item) => AnalisisCard(
+            data: AnalisisDataConverter.fromMlResult(item),
+            onTap: () {},
+          ),
+        ),
         const SizedBox(height: 14),
       ],
     );

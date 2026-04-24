@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 
 class AnalisisData {
   final int number;
@@ -22,4 +23,21 @@ class AnalisisData {
     this.note,
     this.noteColor,
   });
+}
+
+/// Extension untuk convert MlResultModel → AnalisisData
+extension AnalisisDataConverter on AnalisisData {
+  static AnalisisData fromMlResult(dynamic mlResult) {
+    return AnalisisData(
+      number: mlResult.dependenceInt,
+      day: mlResult.dayStr,
+      month: mlResult.monthStr,
+      focus: mlResult.focusInt,
+      prod: mlResult.productivityInt,
+      dep: mlResult.dependenceInt,
+      depHigh: mlResult.highRiskFlag,
+      note: mlResult.riskLabel,
+      noteColor: mlResult.highRiskFlag ? AppColors.red : AppColors.teal,
+    );
+  }
 }

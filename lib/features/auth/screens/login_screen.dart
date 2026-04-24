@@ -12,7 +12,7 @@ import '../../dashboard/screens/dashboard_screen.dart';
 // true  = mock login (backend belum terhubung)
 // false = real API Laravel
 // ─────────────────────────────────────────────────────────────────────────────
-const bool _useMockLogin = true;
+const bool _useMockLogin = false;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
