@@ -19,7 +19,17 @@ class AuthService {
 
   // ── Login ──────────────────────────────────────────────────────────────────
   /// POST /api/auth/login
-  /// Response: { success, message, data: { token, token_type, expires_in, user } }
+  /// Request: { email, password }
+  /// Response: {
+  ///   success: true,
+  ///   message: "Login berhasil",
+  ///   data: {
+  ///     token: "eyJ...",
+  ///     token_type: "bearer",
+  ///     expires_in: 86400,
+  ///     user: { ...UserModel }
+  ///   }
+  /// }
   Future<AuthResponse> login({
     required String email,
     required String password,
@@ -33,6 +43,18 @@ class AuthService {
       final authResponse = AuthResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
+
+      // Validasi token format (JWT harus 3 parts dipisah dengan dot)
+      if (authResponse.token.isEmpty) {
+        throw Exception('Token kosong dari server. Cek respons API.');
+      }
+      final tokenParts = authResponse.token.split('.');
+      if (tokenParts.length != 3) {
+        throw Exception(
+          'Token JWT tidak valid (${tokenParts.length} parts, harusnya 3). '
+          'Periksa format token dari Laravel auth middleware.',
+        );
+      }
 
       // Simpan token & data user
       await _storage.saveToken(authResponse.token);
@@ -50,7 +72,15 @@ class AuthService {
 
   // ── Register ───────────────────────────────────────────────────────────────
   /// POST /api/auth/register
-  /// Response: { success, message, data: { user, token } }
+  /// Request: { name, email, password, password_confirmation, gender, age, region, education_level }
+  /// Response: {
+  ///   success: true,
+  ///   message: "Registrasi berhasil",
+  ///   data: {
+  ///     user: { ...UserModel },
+  ///     token: "eyJ..."
+  ///   }
+  /// }
   Future<RegisterResponse> register({
     required String name,
     required String email,
@@ -80,6 +110,18 @@ class AuthService {
       final registerResponse = RegisterResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
+
+      // Validasi token format (JWT harus 3 parts dipisah dengan dot)
+      if (registerResponse.token.isEmpty) {
+        throw Exception('Token kosong dari server. Cek respons API.');
+      }
+      final tokenParts = registerResponse.token.split('.');
+      if (tokenParts.length != 3) {
+        throw Exception(
+          'Token JWT tidak valid (${tokenParts.length} parts, harusnya 3). '
+          'Periksa format token dari Laravel auth middleware.',
+        );
+      }
 
       // Simpan token & data user
       await _storage.saveToken(registerResponse.token);
@@ -207,11 +249,23 @@ class AuthService {
 
     switch (e.response?.statusCode) {
       case 401:
+        // Detail error dari Laravel JWT
+        if (data is Map<String, dynamic> && data['message'] != null) {
+          return 'Unauthorized: ${data['message']}';
+        }
         return 'Email atau password salah.';
       case 403:
+        if (data is Map<String, dynamic> && data['message'] != null) {
+          return data['message'].toString();
+        }
         return 'Akses ditolak.';
       case 404:
-        return 'Endpoint tidak ditemukan.';
+        if (data is Map<String, dynamic> && data['message'] != null) {
+          return data['message'].toString();
+        }
+        return 'Permintaan tidak ditemukan.';
+      case 410:
+        return 'Kode OTP sudah expired. Silakan minta ulang.';
       case 422:
         return 'Data yang dimasukkan tidak valid.';
       case 429:
@@ -225,7 +279,7 @@ class AuthService {
         }
         if (e.type == DioExceptionType.connectionError) {
           return 'Tidak bisa terhubung ke server. '
-              'Pastikan server Laravel sudah berjalan.';
+              'Pastikan server Laravel sudah berjalan di http://192.168.0.21:8000';
         }
         return 'Terjadi kesalahan. Coba lagi.';
     }

@@ -8,7 +8,7 @@ import '../widgets/auth_dropdown_field.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 
 // Ganti false saat backend siap
-const bool _useMockRegister = true;
+const bool _useMockRegister = false;
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});

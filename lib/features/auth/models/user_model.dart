@@ -29,12 +29,12 @@ class UserModel {
     return UserModel(
       // MongoDB pakai _id, Laravel bisa return id atau _id
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      gender: json['gender'] ?? '',
+      name: json['name']?.toString() ?? 'User',
+      email: json['email']?.toString() ?? '',
+      gender: json['gender']?.toString().toLowerCase() ?? 'male',
       age: _parseInt(json['age']),
-      region: json['region'] ?? '',
-      educationLevel: json['education_level'] ?? '',
+      region: json['region']?.toString() ?? 'Asia',
+      educationLevel: json['education_level']?.toString() ?? 'Bachelor',
       createdAt: _parseDate(json['created_at']),
       lastLogin: json['last_login'] != null
           ? DateTime.tryParse(json['last_login'].toString())
@@ -98,17 +98,27 @@ class UserModel {
 }
 
 // ── Auth Response ──────────────────────────────────────────────────────────────
-/// Parse response dari POST /api/auth/login dan /api/auth/register
+/// Parse response dari POST /api/auth/login
 ///
-/// Format response Laravel:
+/// Format response Laravel (Login):
 /// {
 ///   "success": true,
 ///   "message": "Login berhasil",
 ///   "data": {
-///     "token": "eyJ...",
+///     "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
 ///     "token_type": "bearer",
-///     "expires_in": 3600,
-///     "user": { ... }
+///     "expires_in": 86400,
+///     "user": {
+///       "id": "507f1f77bcf86cd799439011",
+///       "name": "Rizky",
+///       "email": "rizky@gmail.com",
+///       "gender": "male",
+///       "age": 21,
+///       "region": "Asia",
+///       "education_level": "Bachelor",
+///       "created_at": "2024-04-20T10:30:00Z",
+///       "last_login": null
+///     }
 ///   }
 /// }
 class AuthResponse {
@@ -129,7 +139,7 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // data bisa berisi token+user langsung
+    // data bisa berisi token+user+token_type+expires_in
     final data = json['data'] as Map<String, dynamic>? ?? {};
 
     // Token ada di data.token
@@ -137,7 +147,7 @@ class AuthResponse {
 
     // User ada di data.user
     final userJson =
-        data['user'] as Map<String, dynamic>? ?? data as Map<String, dynamic>;
+        data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
     return AuthResponse(
       success: json['success'] as bool? ?? false,
@@ -151,16 +161,29 @@ class AuthResponse {
 }
 
 // ── Register Response ──────────────────────────────────────────────────────────
-/// Format response register berbeda — token & user di dalam data
+/// Parse response dari POST /api/auth/register
 ///
+/// Format response Laravel (Register):
 /// {
 ///   "success": true,
 ///   "message": "Registrasi berhasil",
 ///   "data": {
-///     "user": { ... },
-///     "token": "eyJ..."
+///     "user": {
+///       "id": "507f1f77bcf86cd799439011",
+///       "name": "Rizky",
+///       "email": "rizky@gmail.com",
+///       "gender": "male",
+///       "age": 21,
+///       "region": "Asia",
+///       "education_level": "Bachelor",
+///       "created_at": "2024-04-20T10:30:00Z"
+///     },
+///     "token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
 ///   }
 /// }
+///
+/// CATATAN: Register response TIDAK punya token_type dan expires_in,
+/// hanya token langsung (gunakan default "bearer" untuk token_type)
 class RegisterResponse {
   final bool success;
   final String message;
@@ -176,11 +199,14 @@ class RegisterResponse {
 
   factory RegisterResponse.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>? ?? {};
+    final userJson =
+        data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
+
     return RegisterResponse(
       success: json['success'] as bool? ?? false,
       message: json['message']?.toString() ?? '',
       token: data['token']?.toString() ?? '',
-      user: UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? {}),
+      user: UserModel.fromJson(userJson),
     );
   }
 }

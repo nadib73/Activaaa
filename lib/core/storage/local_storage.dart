@@ -19,9 +19,14 @@ class LocalStorage {
   // ── Token ──────────────────────────────────────────────────────────────────
 
   /// Simpan JWT token setelah login/register berhasil.
+  /// Token akan di-trim untuk menghilangkan whitespace yang tidak perlu.
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyToken, token);
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) {
+      throw Exception('Token tidak boleh kosong');
+    }
+    await prefs.setString(_keyToken, trimmedToken);
   }
 
   /// Ambil JWT token yang tersimpan.
