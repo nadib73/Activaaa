@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/screens/login_screen.dart';
 import '../widgets/stats_row.dart';
 import '../widgets/setting_item.dart';
 import '../widgets/setting_item_toggle.dart';
@@ -45,8 +47,109 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
 
   Future<void> _onLogout() async {
     Navigator.pop(context); // tutup dialog
+
+    // Tampilkan loading overlay selama proses logout
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: AppColors.bgWhite,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    color: AppColors.teal,
+                    strokeWidth: 3,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Sedang keluar...',
+                  style: TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    HapticFeedback.lightImpact();
     await ref.read(authProvider.notifier).logout();
-    // AuthGate di main.dart otomatis redirect ke OnboardingScreen
+
+    // Beri sedikit delay agar loading terasa natural
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (mounted) {
+      // Navigasi ke LoginScreen & hapus seluruh stack
+      Navigator.pushAndRemoveUntil(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => const LoginScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+        (route) => false,
+      );
+
+      // Snackbar konfirmasi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Berhasil keluar dari akun',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.teal,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
