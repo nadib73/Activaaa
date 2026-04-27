@@ -1,155 +1,222 @@
 /// Model untuk data analytics / insight.
-/// Sesuai dengan collection `analytics_logs` di MongoDB.
+///
+/// Sesuai response AnalyticsController@insight():
+/// { period, avg_focus_score, avg_productivity_score, avg_digital_dependence,
+///   focus_change_percentage, focus_change_label, high_risk_days,
+///   total_surveys_week, daily_trend }
+///
+/// Catatan AnalyticsLog.php:
+/// fillable hanya: avg_focus_7_days, focus_change_percentage,
+///                 avg_productivity_7_days
+/// avg_digital_dependence TIDAK disimpan di AnalyticsLog,
+/// tapi TETAP ada di response insight() karena dihitung langsung
+/// dari MlResult — jadi parse tetap aman.
 class AnalyticsModel {
-  final String userId;
-  final double avgFocus7Days;
+  final String period;
+  final double avgFocusScore;
+  final double avgProductivityScore;
+  final double avgDigitalDependence;
   final double focusChangePercentage;
-  final double avgProductivity7Days;
-  final double productivityChangePercentage;
-  final double avgDependence7Days;
-  final double dependenceChangePercentage;
-  final double screenTimeChangePercentage;
-  final List<ChartPoint> focusTrend;
-  final List<ChartPoint> productivityTrend;
-  final List<ChartPoint> dependenceTrend;
-  final DateTime createdAt;
+  final String focusChangeLabel;
+  final int highRiskDays;
+  final int totalSurveysWeek;
+  final List<DailyTrend> dailyTrend;
 
   const AnalyticsModel({
-    required this.userId,
-    required this.avgFocus7Days,
+    required this.period,
+    required this.avgFocusScore,
+    required this.avgProductivityScore,
+    required this.avgDigitalDependence,
     required this.focusChangePercentage,
-    required this.avgProductivity7Days,
-    required this.productivityChangePercentage,
-    required this.avgDependence7Days,
-    required this.dependenceChangePercentage,
-    required this.screenTimeChangePercentage,
-    required this.focusTrend,
-    required this.productivityTrend,
-    required this.dependenceTrend,
-    required this.createdAt,
+    required this.focusChangeLabel,
+    required this.highRiskDays,
+    required this.totalSurveysWeek,
+    required this.dailyTrend,
   });
 
   // ── From JSON ──────────────────────────────────────────────────────────────
   factory AnalyticsModel.fromJson(Map<String, dynamic> json) {
+    final rawTrend = json['daily_trend'] as List? ?? [];
     return AnalyticsModel(
-      userId: json['user_id'] ?? '',
-      avgFocus7Days: (json['avg_focus_7_days'] ?? 0).toDouble(),
-      focusChangePercentage: (json['focus_change_percentage'] ?? 0).toDouble(),
-      avgProductivity7Days: (json['avg_productivity_7_days'] ?? 0).toDouble(),
-      productivityChangePercentage:
-          (json['productivity_change_percentage'] ?? 0).toDouble(),
-      avgDependence7Days: (json['avg_dependence_7_days'] ?? 0).toDouble(),
-      dependenceChangePercentage: (json['dependence_change_percentage'] ?? 0)
-          .toDouble(),
-      screenTimeChangePercentage: (json['screen_time_change_percentage'] ?? 0)
-          .toDouble(),
-      focusTrend: _parsePoints(json['focus_trend']),
-      productivityTrend: _parsePoints(json['productivity_trend']),
-      dependenceTrend: _parsePoints(json['dependence_trend']),
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      period: json['period']?.toString() ?? '7 hari terakhir',
+      avgFocusScore: _toDouble(json['avg_focus_score']),
+      avgProductivityScore: _toDouble(json['avg_productivity_score']),
+      // avg_digital_dependence ada di response tapi tidak di AnalyticsLog
+      avgDigitalDependence: _toDouble(json['avg_digital_dependence']),
+      focusChangePercentage: _toDouble(json['focus_change_percentage']),
+      focusChangeLabel: json['focus_change_label']?.toString() ?? '',
+      highRiskDays: _toInt(json['high_risk_days']),
+      totalSurveysWeek: _toInt(json['total_surveys_week']),
+      dailyTrend: rawTrend
+          .map((e) => DailyTrend.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
-  static List<ChartPoint> _parsePoints(dynamic raw) {
-    if (raw == null || raw is! List) return [];
-    return raw
-        .map((e) => ChartPoint.fromJson(e as Map<String, dynamic>))
-        .toList();
+  static double _toDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString()) ?? 0.0;
   }
 
-  // ── Mock Data (dipakai sebelum backend siap) ───────────────────────────────
+  static int _toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  // ── Mock ───────────────────────────────────────────────────────────────────
   factory AnalyticsModel.mock() {
     return AnalyticsModel(
-      userId: 'mock_user',
-      avgFocus7Days: 0.82,
+      period: '7 hari terakhir',
+      avgFocusScore: 0.82,
+      avgProductivityScore: 75.0,
+      avgDigitalDependence: 60.0,
       focusChangePercentage: 12.0,
-      avgProductivity7Days: 75.0,
-      productivityChangePercentage: 5.0,
-      avgDependence7Days: 60.0,
-      dependenceChangePercentage: -8.0,
-      screenTimeChangePercentage: -20.0,
-      focusTrend: [
-        ChartPoint(label: 'M1', value: 0.55),
-        ChartPoint(label: 'M2', value: 0.60),
-        ChartPoint(label: 'M3', value: 0.58),
-        ChartPoint(label: 'M4', value: 0.65),
-        ChartPoint(label: 'M5', value: 0.72),
-        ChartPoint(label: 'M6', value: 0.80),
-        ChartPoint(label: 'M7', value: 0.82),
+      focusChangeLabel: 'Meningkat signifikan',
+      highRiskDays: 2,
+      totalSurveysWeek: 5,
+      dailyTrend: [
+        DailyTrend(
+          date: '2025-04-01',
+          focus: 0.75,
+          productivity: 70,
+          digitalDependence: 55,
+          highRisk: false,
+        ),
+        DailyTrend(
+          date: '2025-04-02',
+          focus: 0.78,
+          productivity: 72,
+          digitalDependence: 58,
+          highRisk: false,
+        ),
+        DailyTrend(
+          date: '2025-04-03',
+          focus: 0.72,
+          productivity: 68,
+          digitalDependence: 62,
+          highRisk: true,
+        ),
+        DailyTrend(
+          date: '2025-04-04',
+          focus: 0.80,
+          productivity: 74,
+          digitalDependence: 57,
+          highRisk: false,
+        ),
+        DailyTrend(
+          date: '2025-04-05',
+          focus: 0.79,
+          productivity: 73,
+          digitalDependence: 59,
+          highRisk: false,
+        ),
+        DailyTrend(
+          date: '2025-04-06',
+          focus: 0.83,
+          productivity: 76,
+          digitalDependence: 56,
+          highRisk: false,
+        ),
+        DailyTrend(
+          date: '2025-04-07',
+          focus: 0.82,
+          productivity: 75,
+          digitalDependence: 60,
+          highRisk: false,
+        ),
       ],
-      productivityTrend: [
-        ChartPoint(label: 'M1', value: 0.42),
-        ChartPoint(label: 'M2', value: 0.45),
-        ChartPoint(label: 'M3', value: 0.43),
-        ChartPoint(label: 'M4', value: 0.50),
-        ChartPoint(label: 'M5', value: 0.52),
-        ChartPoint(label: 'M6', value: 0.55),
-        ChartPoint(label: 'M7', value: 0.58),
-      ],
-      dependenceTrend: [
-        ChartPoint(label: 'M1', value: 0.30),
-        ChartPoint(label: 'M2', value: 0.35),
-        ChartPoint(label: 'M3', value: 0.38),
-        ChartPoint(label: 'M4', value: 0.42),
-        ChartPoint(label: 'M5', value: 0.48),
-        ChartPoint(label: 'M6', value: 0.55),
-        ChartPoint(label: 'M7', value: 0.60),
-      ],
-      createdAt: DateTime.now(),
     );
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Format persentase dengan tanda + / -
-  String formatChange(double value) {
-    final sign = value >= 0 ? '+' : '';
-    return '$sign${value.toStringAsFixed(0)}%';
+  int get avgFocusInt => (avgFocusScore * 100).round().clamp(0, 100);
+  int get avgProductivityInt => avgProductivityScore.round().clamp(0, 100);
+  int get avgDependenceInt => avgDigitalDependence.round().clamp(0, 100);
+
+  String get focusChangeLabelFormatted {
+    final sign = focusChangePercentage >= 0 ? '+' : '';
+    return '$sign${focusChangePercentage.toStringAsFixed(0)}%';
   }
 
-  String get focusChangeLabel => formatChange(focusChangePercentage);
-  String get productivityChangeLabel =>
-      formatChange(productivityChangePercentage);
-  String get dependenceChangeLabel => formatChange(dependenceChangePercentage);
-  String get screenTimeChangeLabel => formatChange(screenTimeChangePercentage);
-
-  /// Insight otomatis berdasarkan data
   String get insightText {
-    final parts = <String>[];
-
+    if (totalSurveysWeek == 0) {
+      return 'Isi kuesioner untuk melihat insight pertamamu.';
+    }
+    if (focusChangeLabel.isNotEmpty) return focusChangeLabel;
     if (focusChangePercentage > 0) {
-      parts.add(
-        'Focus score kamu naik ${focusChangePercentage.toStringAsFixed(0)}%',
-      );
-    } else if (focusChangePercentage < 0) {
-      parts.add(
-        'Focus score kamu turun ${focusChangePercentage.abs().toStringAsFixed(0)}%',
-      );
+      return 'Focus score naik ${focusChangePercentage.toStringAsFixed(0)}% dibanding minggu lalu.';
     }
-
-    if (screenTimeChangePercentage < 0) {
-      parts.add(
-        'Screen time turun ${screenTimeChangePercentage.abs().toStringAsFixed(0)} menit per hari',
-      );
+    if (focusChangePercentage < 0) {
+      return 'Focus score turun ${focusChangePercentage.abs().toStringAsFixed(0)}% dibanding minggu lalu.';
     }
+    return 'Tidak ada perubahan signifikan minggu ini.';
+  }
 
-    return parts.isNotEmpty
-        ? '${parts.join('. ')} dibanding minggu lalu.'
-        : 'Tidak ada perubahan signifikan minggu ini.';
+  List<ChartPoint> get focusTrendPoints => dailyTrend
+      .map((t) => ChartPoint(label: t.shortDate, value: t.focus))
+      .toList();
+
+  List<ChartPoint> get productivityTrendPoints => dailyTrend
+      .map((t) => ChartPoint(label: t.shortDate, value: t.productivity / 100))
+      .toList();
+
+  List<ChartPoint> get dependenceTrendPoints => dailyTrend
+      .map(
+        (t) => ChartPoint(label: t.shortDate, value: t.digitalDependence / 100),
+      )
+      .toList();
+}
+
+// ── DailyTrend ─────────────────────────────────────────────────────────────────
+class DailyTrend {
+  final String date;
+  final double focus;
+  final double productivity;
+  final double digitalDependence;
+  final bool highRisk;
+
+  const DailyTrend({
+    required this.date,
+    required this.focus,
+    required this.productivity,
+    required this.digitalDependence,
+    required this.highRisk,
+  });
+
+  factory DailyTrend.fromJson(Map<String, dynamic> json) {
+    return DailyTrend(
+      date: json['date']?.toString() ?? '',
+      focus: _toDouble(json['focus']),
+      productivity: _toDouble(json['productivity']),
+      digitalDependence: _toDouble(json['digital_dependence']),
+      highRisk: json['high_risk'] as bool? ?? false,
+    );
+  }
+
+  static double _toDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString()) ?? 0.0;
+  }
+
+  String get shortDate {
+    try {
+      final p = date.split('-');
+      return '${p[2]}/${p[1]}';
+    } catch (_) {
+      return date;
+    }
   }
 }
 
-/// Satu titik data untuk chart.
+// ── ChartPoint ─────────────────────────────────────────────────────────────────
 class ChartPoint {
   final String label;
   final double value;
-
   const ChartPoint({required this.label, required this.value});
-
-  factory ChartPoint.fromJson(Map<String, dynamic> json) {
-    return ChartPoint(
-      label: json['label'] ?? '',
-      value: (json['value'] ?? 0).toDouble(),
-    );
-  }
 }

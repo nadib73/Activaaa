@@ -24,25 +24,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _konfirmasiController = TextEditingController();
   final _umurController = TextEditingController();
 
+  // ── Field tambahan sesuai revisi ──────────────────────────────────────────
   String _gender = 'Male';
-  String _pendidikan = 'Bachelor';
   String _region = 'Asia';
+  String _educationLevel = 'High School';
+  String _incomeLevel = 'Low';
+  String _dailyRole = 'Student';
+  String _deviceType = 'Android';
 
+  // ── Options ───────────────────────────────────────────────────────────────
   static const _genderOptions = ['Male', 'Female'];
-  static const _pendidikanOptions = [
-    'SMA',
+
+  static const _regionOptions = [
+    'Africa',
+    'Asia',
+    'Europe',
+    'Middle East',
+    'North America',
+    'Oceania',
+    'South America',
+  ];
+
+  static const _educationOptions = [
+    'High School',
     'Diploma',
     'Bachelor',
     'Master',
-    'Doctor',
+    'PhD',
   ];
-  static const _regionOptions = [
-    'Asia',
-    'Europe',
-    'America',
-    'Africa',
-    'Australia',
+
+  static const _incomeOptions = ['Low', 'Lower-Mid', 'Upper-Mid', 'High'];
+
+  static const _roleOptions = [
+    'Student',
+    'Full-time Employee',
+    'Part-time Employee',
+    'Freelancer',
+    'Caregiver',
+    'Unemployed',
   ];
+
+  static const _deviceOptions = ['Android', 'iPhone', 'Laptop/PC', 'Tablet'];
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -59,13 +81,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   // ── Validasi ───────────────────────────────────────────────────────────────
 
   bool get _isFormValid {
+    final age = int.tryParse(_umurController.text) ?? 0;
     return _namaController.text.trim().isNotEmpty &&
         _emailController.text.contains('@') &&
         _emailController.text.contains('.') &&
         _passwordController.text.length >= 8 &&
         _passwordController.text == _konfirmasiController.text &&
-        _umurController.text.isNotEmpty &&
-        int.tryParse(_umurController.text) != null;
+        age >= 13 &&
+        age <= 50;
   }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
@@ -73,10 +96,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _onRegister() async {
     if (!_isFormValid) return;
 
-    // Clear error sebelumnya
     ref.read(authProvider.notifier).clearError();
-
     bool success = false;
+
     if (_useMockRegister) {
       success = await ref
           .read(authProvider.notifier)
@@ -85,7 +107,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _emailController.text.trim(),
             age: int.parse(_umurController.text),
             gender: _gender,
-            educationLevel: _pendidikan,
+            educationLevel: _educationLevel,
             region: _region,
           );
     } else {
@@ -98,12 +120,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             passwordConfirmation: _konfirmasiController.text,
             age: int.parse(_umurController.text),
             gender: _gender,
-            educationLevel: _pendidikan,
+            educationLevel: _educationLevel,
             region: _region,
           );
     }
 
-    // Navigasi manual ke Dashboard setelah register berhasil
     if (success && mounted) {
       Navigator.pushAndRemoveUntil(
         context,
@@ -129,23 +150,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Error banner
                     if (errorMsg != null) ...[
                       AuthErrorBanner(message: errorMsg),
                       const SizedBox(height: 16),
                     ],
+
+                    // ── BAGIAN 1: Akun ───────────────────────────────────
                     _buildSectionLabel('INFORMASI AKUN'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildInfoAkunSection(),
                     const SizedBox(height: 24),
+
+                    // ── BAGIAN 2: Data Diri ───────────────────────────────
                     _buildSectionLabel('DATA DIRI'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildDataDiriSection(),
+                    const SizedBox(height: 24),
+
+                    // ── BAGIAN 3: Kebiasaan Digital ───────────────────────
+                    _buildSectionLabel('KEBIASAAN DIGITAL'),
+                    const SizedBox(height: 6),
+                    _buildSectionSubLabel(
+                      'Digunakan untuk personalisasi analisis ML kamu',
+                    ),
+                    const SizedBox(height: 14),
+                    _buildKebiasaanDigitalSection(),
                     const SizedBox(height: 28),
+
+                    // ── Tombol Daftar ─────────────────────────────────────
                     _buildRegisterButton(isLoading),
                     const SizedBox(height: 20),
                     _buildLoginLink(),
@@ -207,6 +243,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  // ── Section Label ──────────────────────────────────────────────────────────
+
   Widget _buildSectionLabel(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -226,6 +264,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  Widget _buildSectionSubLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: AppColors.textMuted,
+        fontSize: 12,
+        height: 1.4,
+      ),
+    );
+  }
+
   // ── Informasi Akun ─────────────────────────────────────────────────────────
 
   Widget _buildInfoAkunSection() {
@@ -239,7 +288,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           isValid: _namaController.text.trim().isNotEmpty,
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         AuthTextField(
           label: 'Email',
           hint: 'nama@email.com',
@@ -249,13 +298,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           isValid: _emailController.text.contains('@'),
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
               child: AuthTextField(
                 label: 'Password',
-                hint: 'Min. 8',
+                hint: 'Min. 8 karakter',
                 prefixIcon: Icons.lock_outline_rounded,
                 controller: _passwordController,
                 isPassword: true,
@@ -267,7 +316,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             Expanded(
               child: AuthTextField(
                 label: 'Konfirmasi',
-                hint: 'Ulangi',
+                hint: 'Ulangi password',
                 prefixIcon: Icons.lock_outline_rounded,
                 controller: _konfirmasiController,
                 isPassword: true,
@@ -293,13 +342,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             Expanded(
               child: AuthTextField(
                 label: 'Umur',
-                hint: '21',
+                hint: '20',
                 prefixIcon: Icons.cake_outlined,
                 controller: _umurController,
                 keyboardType: TextInputType.number,
-                isValid:
-                    _umurController.text.isNotEmpty &&
-                    int.tryParse(_umurController.text) != null,
+                isValid: () {
+                  final age = int.tryParse(_umurController.text) ?? 0;
+                  return age >= 13 && age <= 50;
+                }(),
                 onChanged: (_) => setState(() {}),
               ),
             ),
@@ -314,19 +364,49 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         AuthDropdownField(
-          label: 'Pendidikan',
-          value: _pendidikan,
-          items: _pendidikanOptions,
-          onChanged: (v) => setState(() => _pendidikan = v ?? _pendidikan),
-        ),
-        const SizedBox(height: 16),
-        AuthDropdownField(
-          label: 'Region',
+          label: 'Region / Wilayah',
           value: _region,
           items: _regionOptions,
           onChanged: (v) => setState(() => _region = v ?? _region),
+        ),
+        const SizedBox(height: 14),
+        AuthDropdownField(
+          label: 'Pendidikan Terakhir',
+          value: _educationLevel,
+          items: _educationOptions,
+          onChanged: (v) =>
+              setState(() => _educationLevel = v ?? _educationLevel),
+        ),
+        const SizedBox(height: 14),
+        AuthDropdownField(
+          label: 'Tingkat Pendapatan',
+          value: _incomeLevel,
+          items: _incomeOptions,
+          onChanged: (v) => setState(() => _incomeLevel = v ?? _incomeLevel),
+        ),
+      ],
+    );
+  }
+
+  // ── Kebiasaan Digital ──────────────────────────────────────────────────────
+
+  Widget _buildKebiasaanDigitalSection() {
+    return Column(
+      children: [
+        AuthDropdownField(
+          label: 'Peran Sehari-hari',
+          value: _dailyRole,
+          items: _roleOptions,
+          onChanged: (v) => setState(() => _dailyRole = v ?? _dailyRole),
+        ),
+        const SizedBox(height: 14),
+        AuthDropdownField(
+          label: 'Perangkat Utama yang Dipakai',
+          value: _deviceType,
+          items: _deviceOptions,
+          onChanged: (v) => setState(() => _deviceType = v ?? _deviceType),
         ),
       ],
     );

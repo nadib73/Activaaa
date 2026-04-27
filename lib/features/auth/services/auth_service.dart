@@ -18,8 +18,6 @@ class AuthService {
   AuthService(this._client, this._storage);
 
   // ── Login ──────────────────────────────────────────────────────────────────
-  /// POST /api/auth/login
-  /// Response: { success, message, data: { token, token_type, expires_in, user } }
   Future<AuthResponse> login({
     required String email,
     required String password,
@@ -29,19 +27,18 @@ class AuthService {
         ApiEndpoints.login,
         data: {'email': email.trim().toLowerCase(), 'password': password},
       );
-
       final authResponse = AuthResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
-
-      // Simpan token & data user
-      await _storage.saveToken(authResponse.token);
+      final ttlMinutes = authResponse.expiresIn != null
+          ? (authResponse.expiresIn! / 60).ceil()
+          : 60;
+      await _storage.saveToken(authResponse.token, ttlMinutes: ttlMinutes);
       await _storage.saveUserData(
         userId: authResponse.user.id,
         name: authResponse.user.name,
         email: authResponse.user.email,
       );
-
       return authResponse;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -49,8 +46,6 @@ class AuthService {
   }
 
   // ── Register ───────────────────────────────────────────────────────────────
-  /// POST /api/auth/register
-  /// Response: { success, message, data: { user, token } }
   Future<RegisterResponse> register({
     required String name,
     required String email,
@@ -70,25 +65,20 @@ class AuthService {
           'password': password,
           'password_confirmation': passwordConfirmation,
           'age': age,
-          // Laravel menerima lowercase sesuai validation 'in:male,female,other'
           'gender': gender.toLowerCase(),
           'education_level': educationLevel,
           'region': region,
         },
       );
-
       final registerResponse = RegisterResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
-
-      // Simpan token & data user
-      await _storage.saveToken(registerResponse.token);
+      await _storage.saveToken(registerResponse.token, ttlMinutes: 60);
       await _storage.saveUserData(
         userId: registerResponse.user.id,
         name: registerResponse.user.name,
         email: registerResponse.user.email,
       );
-
       return registerResponse;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -96,29 +86,23 @@ class AuthService {
   }
 
   // ── Logout ─────────────────────────────────────────────────────────────────
-  /// POST /api/auth/logout (butuh JWT token)
+  /// JWT blacklist_enabled = true → token diinvalidate di server
   Future<void> logout() async {
     try {
       await _client.post(ApiEndpoints.logout);
     } on DioException catch (_) {
-      // Tetap lanjut logout lokal meski request gagal
+      // Tetap logout lokal meski request gagal
     } finally {
       await _storage.clearAll();
     }
   }
 
   // ── Get Profile ────────────────────────────────────────────────────────────
-  /// GET /api/auth/me (butuh JWT token)
-  /// Response: { success, data: { user object } }
   Future<UserModel> getProfile() async {
     try {
       final response = await _client.get(ApiEndpoints.me);
       final data = response.data as Map<String, dynamic>;
-
-      // Response: { success: true, data: { ...user } }
-      final userJson =
-          data['data'] as Map<String, dynamic>? ?? data as Map<String, dynamic>;
-
+      final userJson = data['data'] as Map<String, dynamic>? ?? data;
       return UserModel.fromJson(userJson);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -126,7 +110,6 @@ class AuthService {
   }
 
   // ── Forgot Password ────────────────────────────────────────────────────────
-  /// POST /api/auth/forgot-password
   Future<void> forgotPassword(String email) async {
     try {
       await _client.post(
@@ -139,7 +122,6 @@ class AuthService {
   }
 
   // ── Verify OTP ─────────────────────────────────────────────────────────────
-  /// POST /api/auth/verify-otp
   Future<void> verifyOtp({
     required String email,
     required String otpCode,
@@ -155,7 +137,6 @@ class AuthService {
   }
 
   // ── Reset Password ─────────────────────────────────────────────────────────
-  /// POST /api/auth/reset-password
   Future<void> resetPassword({
     required String email,
     required String password,
@@ -175,9 +156,9 @@ class AuthService {
     }
   }
 
-  // ── Simpan sesi mock ───────────────────────────────────────────────────────
+  // ── Mock Session ───────────────────────────────────────────────────────────
   Future<void> saveMockSession(UserModel user) async {
-    await _storage.saveToken('mock_token_${user.id}');
+    await _storage.saveToken('mock_token_${user.id}', ttlMinutes: 60 * 24);
     await _storage.saveUserData(
       userId: user.id,
       name: user.name,
@@ -191,20 +172,14 @@ class AuthService {
   // ── Error Handler ──────────────────────────────────────────────────────────
   String _handleError(DioException e) {
     final data = e.response?.data;
-
     if (data is Map<String, dynamic>) {
-      // Ambil message dari response Laravel
-      if (data['message'] != null) {
-        return data['message'].toString();
-      }
-      // Ambil dari errors (validation)
+      if (data['message'] != null) return data['message'].toString();
       if (data['errors'] != null) {
         final errors = data['errors'] as Map<String, dynamic>;
         final first = errors.values.first;
         return first is List ? first.first.toString() : first.toString();
       }
     }
-
     switch (e.response?.statusCode) {
       case 401:
         return 'Email atau password salah.';
@@ -212,6 +187,8 @@ class AuthService {
         return 'Akses ditolak.';
       case 404:
         return 'Endpoint tidak ditemukan.';
+      case 410:
+        return 'Kode OTP sudah expired, silakan minta ulang.';
       case 422:
         return 'Data yang dimasukkan tidak valid.';
       case 429:
@@ -224,8 +201,7 @@ class AuthService {
           return 'Koneksi timeout. Periksa internet kamu.';
         }
         if (e.type == DioExceptionType.connectionError) {
-          return 'Tidak bisa terhubung ke server. '
-              'Pastikan server Laravel sudah berjalan.';
+          return 'Tidak bisa terhubung ke server.';
         }
         return 'Terjadi kesalahan. Coba lagi.';
     }

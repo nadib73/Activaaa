@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/questionnaire_provider.dart';
@@ -6,6 +7,11 @@ import '../widgets/question_option_card.dart';
 import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
+import '../../auth/providers/auth_provider.dart';
+
+// true  = hitung lokal (backend belum siap)
+// false = kirim ke Laravel → data masuk MongoDB
+const bool _useMockSurvey = false;
 
 class KuesionerScreen extends ConsumerStatefulWidget {
   const KuesionerScreen({super.key});
@@ -14,18 +20,33 @@ class KuesionerScreen extends ConsumerStatefulWidget {
   ConsumerState<KuesionerScreen> createState() => _KuesionerScreenState();
 }
 
-class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
-    with SingleTickerProviderStateMixin {
+class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
   late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    // Reset form setiap kali masuk kuesioner
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(questionnaireProvider.notifier).reset();
+      // Isi otomatis field dari data user yang sudah login
+      _prefillFromUser();
     });
+  }
+
+  void _prefillFromUser() {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    ref
+        .read(questionnaireProvider.notifier)
+        .setFromUserData(
+          gender: user.gender,
+          region: user.region,
+          educationLevel: user.educationLevel,
+          incomeLevel: 'Low', // fallback jika belum ada di UserModel
+          dailyRole: 'Student',
+          deviceType: 'Android',
+        );
   }
 
   @override
@@ -37,13 +58,10 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   void _nextPage() {
-    final notifier = ref.read(questionnaireProvider.notifier);
-    final state = ref.read(questionnaireProvider);
-
-    if (state.isLastPage) {
+    if (ref.read(questionnaireProvider).isLastPage) {
       _submit();
     } else {
-      notifier.nextPage();
+      ref.read(questionnaireProvider.notifier).nextPage();
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
@@ -52,11 +70,9 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
   }
 
   void _prevPage() {
-    final notifier = ref.read(questionnaireProvider.notifier);
     final state = ref.read(questionnaireProvider);
-
     if (state.currentPage > 0) {
-      notifier.prevPage();
+      ref.read(questionnaireProvider.notifier).prevPage();
       _pageController.previousPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
@@ -67,11 +83,9 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
   }
 
   Future<void> _submit() async {
-    // useMock: true  → hitung lokal (sekarang)
-    // useMock: false → kirim ke Laravel saat backend siap
     final success = await ref
         .read(questionnaireProvider.notifier)
-        .submit(useMock: true);
+        .submit(useMock: _useMockSurvey);
 
     if (success && mounted) {
       final result = ref.read(questionnaireProvider).result;
@@ -99,9 +113,9 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _PageInformasiUmum(),
-                  _PagePenggunaanPerangkat(),
-                  _PageAktivitasHarian(),
+                  _PageInfoDiri(),
+                  _PagePenggunaanDigital(),
+                  _PageAktivitasTidur(),
                   _PageKondisiMental(),
                 ],
               ),
@@ -116,13 +130,13 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
   // ── Header ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(QuestionnaireState state) {
-    final titles = [
-      'Informasi Umum',
-      'Penggunaan Perangkat',
-      'Aktivitas Harian',
+    const titles = [
+      'Info Diri',
+      'Penggunaan Digital',
+      'Aktivitas & Tidur',
       'Kondisi Mental',
     ];
-    final subtitles = [
+    const subtitles = [
       'Ceritakan sedikit tentang dirimu',
       'Seberapa sering kamu pakai gadget?',
       'Bagaimana keseharianmu?',
@@ -135,7 +149,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back + title
           Row(
             children: [
               GestureDetector(
@@ -178,7 +191,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
                   ],
                 ),
               ),
-              // Counter halaman
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -200,7 +212,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
             ],
           ),
           const SizedBox(height: 14),
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -218,9 +229,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
   // ── Bottom Bar ─────────────────────────────────────────────────────────────
 
   Widget _buildBottomBar(QuestionnaireState state) {
-    final isLoading = state.isLoading;
-    final isLastPage = state.isLastPage;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: BoxDecoration(
@@ -237,7 +245,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
         width: double.infinity,
         height: 54,
         child: ElevatedButton(
-          onPressed: isLoading ? null : _nextPage,
+          onPressed: state.isLoading ? null : _nextPage,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.teal,
             foregroundColor: Colors.white,
@@ -247,7 +255,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
             ),
             elevation: 0,
           ),
-          child: isLoading
+          child: state.isLoading
               ? const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -274,7 +282,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      isLastPage ? 'Lihat Hasil Analisis' : 'Lanjut',
+                      state.isLastPage ? 'Lihat Hasil Analisis' : 'Lanjut',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -282,7 +290,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
                     ),
                     const SizedBox(width: 8),
                     Icon(
-                      isLastPage
+                      state.isLastPage
                           ? Icons.analytics_outlined
                           : Icons.arrow_forward_rounded,
                       size: 18,
@@ -296,127 +304,417 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 1 — INFORMASI UMUM
+// HALAMAN 1 — INFO DIRI
+// Q1: Usia (input angka)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _PageInformasiUmum extends ConsumerWidget {
+class _PageInfoDiri extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(questionnaireProvider).form;
+  ConsumerState<_PageInfoDiri> createState() => _PageInfoDiriState();
+}
+
+class _PageInfoDiriState extends ConsumerState<_PageInfoDiri> {
+  late final TextEditingController _ageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final age = ref.read(questionnaireProvider).form.age;
+    _ageController = TextEditingController(text: age > 0 ? age.toString() : '');
+  }
+
+  @override
+  void dispose() {
+    _ageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notifier = ref.read(questionnaireProvider.notifier);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Q1 — Daily Role
+          // Info field dari register
+          _buildRegisterInfoBanner(),
+          const SizedBox(height: 28),
+
+          // Q1 — Usia
           _QuestionBlock(
             number: 1,
-            question: 'Apa peran utama kamu sehari-hari?',
-            hint: 'Pilih yang paling sesuai dengan aktivitasmu',
-            child: Column(
-              children: [
-                QuestionOptionCard(
-                  label: 'Pelajar / Mahasiswa',
-                  subtitle: 'Sekolah, kuliah, atau kursus',
-                  icon: Icons.school_outlined,
-                  isSelected: form.dailyRole == 'Student',
-                  onTap: () => notifier.setDailyRole('Student'),
+            question: 'Berapa usia kamu saat ini?',
+            hint: 'Masukkan usia antara 13 hingga 50 tahun',
+            child: _buildAgeInput(notifier),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegisterInfoBanner() {
+    final form = ref.watch(questionnaireProvider).form;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.teal.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.teal.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.teal,
+                size: 16,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Data dari akun kamu',
+                style: TextStyle(
+                  color: AppColors.teal,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
-                QuestionOptionCard(
-                  label: 'Karyawan / Pekerja',
-                  subtitle: 'Bekerja penuh atau paruh waktu',
-                  icon: Icons.work_outline_rounded,
-                  isSelected: form.dailyRole == 'Employee',
-                  onTap: () => notifier.setDailyRole('Employee'),
-                ),
-                QuestionOptionCard(
-                  label: 'Wirausaha',
-                  subtitle: 'Menjalankan bisnis sendiri',
-                  icon: Icons.business_center_outlined,
-                  isSelected: form.dailyRole == 'Entrepreneur',
-                  onTap: () => notifier.setDailyRole('Entrepreneur'),
-                ),
-                QuestionOptionCard(
-                  label: 'Freelancer',
-                  subtitle: 'Pekerja lepas / remote',
-                  icon: Icons.laptop_outlined,
-                  isSelected: form.dailyRole == 'Freelancer',
-                  onTap: () => notifier.setDailyRole('Freelancer'),
-                ),
-                QuestionOptionCard(
-                  label: 'Lainnya',
-                  subtitle: 'Ibu rumah tangga, pensiunan, dll',
-                  icon: Icons.person_outline_rounded,
-                  isSelected: form.dailyRole == 'Other',
-                  onTap: () => notifier.setDailyRole('Other'),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _infoRow('Gender', form.gender),
+          _infoRow('Region', form.region),
+          _infoRow('Pendidikan', form.educationLevel),
+          const SizedBox(height: 4),
+          const Text(
+            'Data di atas diambil otomatis dari profil akun kamu.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 28),
+        ],
+      ),
+    );
+  }
 
-          // Q2 — Income Level
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+          ),
+          Text(
+            ': $value',
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAgeInput(QuestionnaireNotifier notifier) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _ageController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(2),
+          ],
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            hintText: '20',
+            hintStyle: TextStyle(color: Colors.grey.shade300, fontSize: 24),
+            suffixText: 'tahun',
+            suffixStyle: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 16,
+            ),
+            filled: true,
+            fillColor: AppColors.bgLight,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.teal, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 18,
+            ),
+          ),
+          onChanged: (val) {
+            final age = int.tryParse(val) ?? 0;
+            if (age >= 13 && age <= 50) {
+              notifier.setAge(age);
+            }
+          },
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: Colors.grey.shade400,
+              size: 13,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Rentang usia yang valid: 13 – 50 tahun',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HALAMAN 2 — PENGGUNAAN DIGITAL
+// Q8–Q12: Semua pilihan (option card)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _PagePenggunaanDigital extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final form = ref.watch(questionnaireProvider).form;
+    final notifier = ref.read(questionnaireProvider.notifier);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Column(
+        children: [
+          // Q2 — Lama pakai perangkat
           _QuestionBlock(
             number: 2,
-            question: 'Berapa kisaran pendapatan bulananmu?',
-            hint: 'Informasi ini bersifat rahasia dan hanya untuk analisis',
+            question:
+                'Berapa lama kamu menggunakan perangkat digital per hari?',
+            hint: 'Total semua perangkat (HP, laptop, tablet, dll)',
             child: Column(
               children: [
                 QuestionOptionCard(
-                  label: 'Rendah',
-                  subtitle: 'Di bawah Rp 3 juta / bulan',
-                  icon: Icons.trending_down_rounded,
-                  isSelected: form.incomeLevel == 'Low',
-                  onTap: () => notifier.setIncomeLevel('Low'),
+                  label: 'Sangat Sedikit',
+                  subtitle: 'Kurang dari 2 jam',
+                  isSelected: form.deviceHoursPerDay == 1.5,
+                  onTap: () => notifier.setDeviceHours(1.5),
                 ),
                 QuestionOptionCard(
-                  label: 'Menengah',
-                  subtitle: 'Rp 3 juta – Rp 10 juta / bulan',
-                  icon: Icons.trending_flat_rounded,
-                  isSelected: form.incomeLevel == 'Middle',
-                  onTap: () => notifier.setIncomeLevel('Middle'),
+                  label: 'Sedikit',
+                  subtitle: 'Sekitar 2–4 jam',
+                  isSelected: form.deviceHoursPerDay == 3.0,
+                  onTap: () => notifier.setDeviceHours(3.0),
                 ),
                 QuestionOptionCard(
-                  label: 'Tinggi',
-                  subtitle: 'Di atas Rp 10 juta / bulan',
-                  icon: Icons.trending_up_rounded,
-                  isSelected: form.incomeLevel == 'High',
-                  onTap: () => notifier.setIncomeLevel('High'),
+                  label: 'Sedang',
+                  subtitle: 'Sekitar 4–7 jam',
+                  isSelected: form.deviceHoursPerDay == 5.5,
+                  onTap: () => notifier.setDeviceHours(5.5),
+                ),
+                QuestionOptionCard(
+                  label: 'Lama',
+                  subtitle: 'Sekitar 7–10 jam',
+                  isSelected: form.deviceHoursPerDay == 8.5,
+                  onTap: () => notifier.setDeviceHours(8.5),
+                ),
+                QuestionOptionCard(
+                  label: 'Sangat Lama',
+                  subtitle: 'Lebih dari 10 jam',
+                  isSelected: form.deviceHoursPerDay == 12.0,
+                  onTap: () => notifier.setDeviceHours(12.0),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 28),
 
-          // Q3 — Device Type
+          // Q3 — Buka HP
           _QuestionBlock(
             number: 3,
-            question: 'Apa perangkat utama yang kamu pakai sehari-hari?',
-            hint: 'Pilih perangkat yang paling sering kamu gunakan',
+            question: 'Seberapa sering kamu membuka HP dalam sehari?',
+            hint: 'Estimasi berapa kali kamu cek / unlock HP',
             child: Column(
               children: [
                 QuestionOptionCard(
-                  label: 'Smartphone',
-                  subtitle: 'Android atau iPhone',
-                  icon: Icons.smartphone_rounded,
-                  isSelected: form.deviceType == 'Smartphone',
-                  onTap: () => notifier.setDeviceType('Smartphone'),
+                  label: 'Jarang',
+                  subtitle: 'Kurang dari 20 kali',
+                  isSelected: form.phoneUnlocksPerDay == 10,
+                  onTap: () => notifier.setPhoneUnlocks(10),
                 ),
                 QuestionOptionCard(
-                  label: 'Laptop / PC',
-                  subtitle: 'Komputer atau laptop',
-                  icon: Icons.laptop_rounded,
-                  isSelected: form.deviceType == 'Laptop',
-                  onTap: () => notifier.setDeviceType('Laptop'),
+                  label: 'Kadang-kadang',
+                  subtitle: 'Sekitar 20–50 kali',
+                  isSelected: form.phoneUnlocksPerDay == 35,
+                  onTap: () => notifier.setPhoneUnlocks(35),
                 ),
                 QuestionOptionCard(
-                  label: 'Tablet',
-                  subtitle: 'iPad atau tablet Android',
-                  icon: Icons.tablet_rounded,
-                  isSelected: form.deviceType == 'Tablet',
-                  onTap: () => notifier.setDeviceType('Tablet'),
+                  label: 'Cukup Sering',
+                  subtitle: 'Sekitar 50–100 kali',
+                  isSelected: form.phoneUnlocksPerDay == 75,
+                  onTap: () => notifier.setPhoneUnlocks(75),
+                ),
+                QuestionOptionCard(
+                  label: 'Sering',
+                  subtitle: 'Sekitar 100–200 kali',
+                  isSelected: form.phoneUnlocksPerDay == 150,
+                  onTap: () => notifier.setPhoneUnlocks(150),
+                ),
+                QuestionOptionCard(
+                  label: 'Sangat Sering',
+                  subtitle: 'Lebih dari 200 kali',
+                  isSelected: form.phoneUnlocksPerDay == 250,
+                  onTap: () => notifier.setPhoneUnlocks(250),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Q4 — Notifikasi
+          _QuestionBlock(
+            number: 4,
+            question: 'Berapa banyak notifikasi yang kamu terima per hari?',
+            hint: 'Gabungan semua aplikasi: WA, IG, email, dll',
+            child: Column(
+              children: [
+                QuestionOptionCard(
+                  label: 'Hampir Tidak Ada',
+                  subtitle: 'Kurang dari 50 notifikasi',
+                  isSelected: form.notificationsPerDay == 30,
+                  onTap: () => notifier.setNotifications(30),
+                ),
+                QuestionOptionCard(
+                  label: 'Sedikit',
+                  subtitle: 'Sekitar 50–200 notifikasi',
+                  isSelected: form.notificationsPerDay == 100,
+                  onTap: () => notifier.setNotifications(100),
+                ),
+                QuestionOptionCard(
+                  label: 'Lumayan',
+                  subtitle: 'Sekitar 200–500 notifikasi',
+                  isSelected: form.notificationsPerDay == 300,
+                  onTap: () => notifier.setNotifications(300),
+                ),
+                QuestionOptionCard(
+                  label: 'Banyak',
+                  subtitle: 'Sekitar 500–1000 notifikasi',
+                  isSelected: form.notificationsPerDay == 700,
+                  onTap: () => notifier.setNotifications(700),
+                ),
+                QuestionOptionCard(
+                  label: 'Sangat Banyak',
+                  subtitle: 'Lebih dari 1000 notifikasi',
+                  isSelected: form.notificationsPerDay == 1100,
+                  onTap: () => notifier.setNotifications(1100),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Q5 — Sosmed
+          _QuestionBlock(
+            number: 5,
+            question: 'Berapa lama kamu menggunakan media sosial per hari?',
+            hint: 'Instagram, TikTok, Twitter, YouTube, dll',
+            child: Column(
+              children: [
+                QuestionOptionCard(
+                  label: 'Tidak Pakai',
+                  subtitle: 'Hampir tidak pernah',
+                  isSelected: form.socialMediaMinutes == 0,
+                  onTap: () => notifier.setSocialMediaMinutes(0),
+                ),
+                QuestionOptionCard(
+                  label: 'Kurang dari 1 Jam',
+                  subtitle: 'Sekitar 30 menit',
+                  isSelected: form.socialMediaMinutes == 30,
+                  onTap: () => notifier.setSocialMediaMinutes(30),
+                ),
+                QuestionOptionCard(
+                  label: '1–3 Jam',
+                  subtitle: 'Sekitar 2 jam per hari',
+                  isSelected: form.socialMediaMinutes == 120,
+                  onTap: () => notifier.setSocialMediaMinutes(120),
+                ),
+                QuestionOptionCard(
+                  label: '3–5 Jam',
+                  subtitle: 'Sekitar 4 jam per hari',
+                  isSelected: form.socialMediaMinutes == 240,
+                  onTap: () => notifier.setSocialMediaMinutes(240),
+                ),
+                QuestionOptionCard(
+                  label: 'Lebih dari 5 Jam',
+                  subtitle: 'Sangat banyak waktu di sosmed',
+                  isSelected: form.socialMediaMinutes == 400,
+                  onTap: () => notifier.setSocialMediaMinutes(400),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Q6 — Belajar/Kerja produktif
+          _QuestionBlock(
+            number: 6,
+            question: 'Seberapa produktif kamu belajar atau bekerja per hari?',
+            hint: 'Waktu fokus tanpa distraksi',
+            child: Column(
+              children: [
+                QuestionOptionCard(
+                  label: 'Hampir Tidak Ada',
+                  subtitle: 'Kurang dari 30 menit',
+                  isSelected: form.studyMinutes == 10,
+                  onTap: () => notifier.setStudyMinutes(10),
+                ),
+                QuestionOptionCard(
+                  label: 'Sedikit',
+                  subtitle: 'Sekitar 30 menit – 1 jam',
+                  isSelected: form.studyMinutes == 60,
+                  onTap: () => notifier.setStudyMinutes(60),
+                ),
+                QuestionOptionCard(
+                  label: 'Cukup',
+                  subtitle: 'Sekitar 1–3 jam',
+                  isSelected: form.studyMinutes == 150,
+                  onTap: () => notifier.setStudyMinutes(150),
+                ),
+                QuestionOptionCard(
+                  label: 'Produktif',
+                  subtitle: 'Sekitar 3–5 jam',
+                  isSelected: form.studyMinutes == 300,
+                  onTap: () => notifier.setStudyMinutes(300),
+                ),
+                QuestionOptionCard(
+                  label: 'Sangat Produktif',
+                  subtitle: 'Lebih dari 5 jam fokus',
+                  isSelected: form.studyMinutes == 400,
+                  onTap: () => notifier.setStudyMinutes(400),
                 ),
               ],
             ),
@@ -429,10 +727,13 @@ class _PageInformasiUmum extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 2 — PENGGUNAAN PERANGKAT
+// HALAMAN 3 — AKTIVITAS & TIDUR
+// Q7: slider hari olahraga
+// Q8: slider jam tidur
+// Q9: pilihan kualitas tidur
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _PagePenggunaanPerangkat extends ConsumerWidget {
+class _PageAktivitasTidur extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final form = ref.watch(questionnaireProvider).form;
@@ -441,125 +742,10 @@ class _PagePenggunaanPerangkat extends ConsumerWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Q4 — Device Hours
-          _QuestionBlock(
-            number: 4,
-            question: 'Berapa jam kamu menggunakan perangkat per hari?',
-            hint: 'Termasuk HP, laptop, tablet — total semua perangkat',
-            child: QuestionSlider(
-              value: form.deviceHoursPerDay,
-              min: 0,
-              max: 16,
-              divisions: 32,
-              unit: 'jam',
-              minLabel: '0 jam',
-              maxLabel: '16 jam',
-              onChanged: (v) => notifier.setDeviceHours(v),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Q5 — Phone Unlocks
-          _QuestionBlock(
-            number: 5,
-            question: 'Berapa kali kamu membuka HP dalam sehari?',
-            hint: 'Estimasi berapa kali kamu unlock / cek HP per hari',
-            child: QuestionSlider(
-              value: form.phoneUnlocksPerDay.toDouble(),
-              min: 0,
-              max: 300,
-              divisions: 60,
-              unit: 'kali',
-              minLabel: '0 kali',
-              maxLabel: '300+ kali',
-              activeColor: AppColors.amber,
-              onChanged: (v) => notifier.setPhoneUnlocks(v.round()),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Q6 — Notifications
-          _QuestionBlock(
-            number: 6,
-            question: 'Berapa notifikasi yang kamu terima per hari?',
-            hint: 'Gabungan semua aplikasi: WA, IG, email, dll',
-            child: QuestionSlider(
-              value: form.notificationsPerDay.toDouble(),
-              min: 0,
-              max: 500,
-              divisions: 50,
-              unit: 'notif',
-              minLabel: '0',
-              maxLabel: '500+',
-              activeColor: AppColors.red,
-              onChanged: (v) => notifier.setNotifications(v.round()),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Q7 — Social Media Minutes
+          // Q7 — Hari olahraga
           _QuestionBlock(
             number: 7,
-            question: 'Berapa menit kamu menggunakan media sosial per hari?',
-            hint: 'Instagram, TikTok, Twitter, YouTube, dll',
-            child: QuestionSlider(
-              value: form.socialMediaMinutes.toDouble(),
-              min: 0,
-              max: 480,
-              divisions: 48,
-              unit: 'menit',
-              minLabel: '0 menit',
-              maxLabel: '8 jam',
-              activeColor: const Color(0xFF8B5CF6),
-              onChanged: (v) => notifier.setSocialMediaMinutes(v.round()),
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 3 — AKTIVITAS HARIAN
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _PageAktivitasHarian extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final form = ref.watch(questionnaireProvider).form;
-    final notifier = ref.read(questionnaireProvider.notifier);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Q8 — Study Minutes
-          _QuestionBlock(
-            number: 8,
-            question: 'Berapa menit kamu belajar atau bekerja per hari?',
-            hint: 'Waktu fokus untuk belajar / bekerja tanpa distraksi',
-            child: QuestionSlider(
-              value: form.studyMinutes.toDouble(),
-              min: 0,
-              max: 600,
-              divisions: 60,
-              unit: 'menit',
-              minLabel: '0 menit',
-              maxLabel: '10 jam',
-              activeColor: AppColors.blue,
-              onChanged: (v) => notifier.setStudyMinutes(v.round()),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Q9 — Physical Activity Days
-          _QuestionBlock(
-            number: 9,
             question: 'Berapa hari kamu berolahraga dalam seminggu?',
             hint: 'Olahraga minimal 30 menit, termasuk jalan kaki',
             child: Column(
@@ -576,28 +762,69 @@ class _PageAktivitasHarian extends ConsumerWidget {
                   onChanged: (v) => notifier.setPhysicalActivityDays(v.round()),
                 ),
                 const SizedBox(height: 12),
-                // Visual feedback hari olahraga
                 _buildActivityDays(form.physicalActivityDays),
               ],
             ),
           ),
           const SizedBox(height: 32),
 
-          // Q10 — Sleep Hours
+          // Q8 — Jam tidur
           _QuestionBlock(
-            number: 10,
+            number: 8,
             question: 'Berapa jam kamu tidur per malam?',
-            hint: 'Rata-rata tidur dalam 7 hari terakhir',
+            hint: 'Rata-rata dalam 7 hari terakhir',
             child: QuestionSlider(
               value: form.sleepHours,
-              min: 2,
-              max: 12,
-              divisions: 20,
+              min: 3,
+              max: 11,
+              divisions: 16,
               unit: 'jam',
-              minLabel: '2 jam',
-              maxLabel: '12 jam',
+              minLabel: '3 jam',
+              maxLabel: '11 jam',
               activeColor: const Color(0xFF6366F1),
               onChanged: (v) => notifier.setSleepHours(v),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Q9 — Kualitas tidur (pilihan)
+          _QuestionBlock(
+            number: 9,
+            question: 'Bagaimana kualitas tidurmu secara umum?',
+            hint: 'Pilih yang paling menggambarkan tidurmu',
+            child: Column(
+              children: [
+                QuestionOptionCard(
+                  label: 'Sangat Buruk',
+                  subtitle: 'Sering terbangun, tidak segar',
+                  isSelected: form.sleepQuality == 1.0,
+                  onTap: () => notifier.setSleepQuality(1.0),
+                ),
+                QuestionOptionCard(
+                  label: 'Buruk',
+                  subtitle: 'Kadang terbangun, kurang segar',
+                  isSelected: form.sleepQuality == 2.0,
+                  onTap: () => notifier.setSleepQuality(2.0),
+                ),
+                QuestionOptionCard(
+                  label: 'Cukup',
+                  subtitle: 'Tidur cukup tapi tidak optimal',
+                  isSelected: form.sleepQuality == 3.0,
+                  onTap: () => notifier.setSleepQuality(3.0),
+                ),
+                QuestionOptionCard(
+                  label: 'Baik',
+                  subtitle: 'Tidur nyenyak, terasa segar',
+                  isSelected: form.sleepQuality == 4.0,
+                  onTap: () => notifier.setSleepQuality(4.0),
+                ),
+                QuestionOptionCard(
+                  label: 'Sangat Baik',
+                  subtitle: 'Tidur sangat nyenyak & berkualitas',
+                  isSelected: form.sleepQuality == 5.0,
+                  onTap: () => notifier.setSleepQuality(5.0),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -653,6 +880,10 @@ class _PageAktivitasHarian extends ConsumerWidget {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HALAMAN 4 — KONDISI MENTAL
+// Q10: Anxiety 0–27
+// Q11: Depresi  0–27
+// Q12: Stres    1–10
+// Q13: Happiness 0–10
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _PageKondisiMental extends ConsumerWidget {
@@ -664,84 +895,75 @@ class _PageKondisiMental extends ConsumerWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info disclaimer
           _buildDisclaimer(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // Q11 — Sleep Quality
+          // Q10 — Anxiety (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 11,
-            question: 'Seberapa baik kualitas tidurmu?',
-            hint: '1 = sangat buruk, 10 = sangat nyenyak',
-            child: QuestionScalePicker(
-              value: form.sleepQuality,
-              lowLabel: 'Sangat Buruk',
-              highLabel: 'Sangat Nyenyak',
-              activeColor: const Color(0xFF6366F1),
-              onChanged: (v) => notifier.setSleepQuality(v),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Q12 — Anxiety Score
-          _QuestionBlock(
-            number: 12,
-            question: 'Seberapa sering kamu merasa cemas?',
-            hint: '1 = tidak pernah, 10 = sangat sering',
+            number: 10,
+            question: 'Seberapa sering kamu merasa cemas atau gelisah?',
+            hint: '0 = tidak pernah cemas, 27 = sangat sering cemas',
             child: QuestionScalePicker(
               value: form.anxietyScore,
+              min: 0,
+              max: 27,
               lowLabel: 'Tidak Pernah',
               highLabel: 'Sangat Sering',
-              activeColor: AppColors.amber,
-              onChanged: (v) => notifier.setAnxietyScore(v),
+              invertColor: true,
+              onChanged: (v) => notifier.setAnxietyScore(v.toDouble()),
             ),
           ),
           const SizedBox(height: 28),
 
-          // Q13 — Depression Score
+          // Q11 — Depresi (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 13,
+            number: 11,
             question:
                 'Seberapa sering kamu merasa sedih atau tidak bersemangat?',
-            hint: '1 = tidak pernah, 10 = hampir setiap hari',
+            hint: '0 = tidak pernah, 27 = hampir setiap saat',
             child: QuestionScalePicker(
               value: form.depressionScore,
+              min: 0,
+              max: 27,
               lowLabel: 'Tidak Pernah',
-              highLabel: 'Hampir Setiap Hari',
-              activeColor: AppColors.red,
-              onChanged: (v) => notifier.setDepressionScore(v),
+              highLabel: 'Hampir Setiap Saat',
+              invertColor: true,
+              onChanged: (v) => notifier.setDepressionScore(v.toDouble()),
             ),
           ),
           const SizedBox(height: 28),
 
-          // Q14 — Stress Level
+          // Q12 — Stres (1–10, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 14,
+            number: 12,
             question: 'Seberapa tinggi tingkat stres kamu saat ini?',
             hint: '1 = sangat santai, 10 = sangat stres',
             child: QuestionScalePicker(
               value: form.stressLevel,
+              min: 1,
+              max: 10,
               lowLabel: 'Sangat Santai',
               highLabel: 'Sangat Stres',
-              activeColor: AppColors.red,
-              onChanged: (v) => notifier.setStressLevel(v),
+              invertColor: true,
+              onChanged: (v) => notifier.setStressLevel(v.toDouble()),
             ),
           ),
           const SizedBox(height: 28),
 
-          // Q15 — Happiness Score
+          // Q13 — Happiness (0–10, normal: tinggi = hijau)
           _QuestionBlock(
-            number: 15,
-            question: 'Seberapa bahagia kamu hari ini?',
-            hint: '1 = sangat tidak bahagia, 10 = sangat bahagia',
+            number: 13,
+            question: 'Seberapa bahagia kamu belakangan ini?',
+            hint: '0 = sangat tidak bahagia, 10 = sangat bahagia',
             child: QuestionScalePicker(
               value: form.happinessScore,
+              min: 0,
+              max: 10,
               lowLabel: 'Tidak Bahagia',
               highLabel: 'Sangat Bahagia',
-              activeColor: AppColors.green,
-              onChanged: (v) => notifier.setHappinessScore(v),
+              invertColor: false,
+              onChanged: (v) => notifier.setHappinessScore(v.toDouble()),
             ),
           ),
           const SizedBox(height: 20),
@@ -806,7 +1028,6 @@ class _QuestionBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Badge nomor pertanyaan
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -824,7 +1045,6 @@ class _QuestionBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        // Teks pertanyaan
         Text(
           question,
           style: const TextStyle(
@@ -834,7 +1054,6 @@ class _QuestionBlock extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        // Hint
         if (hint != null) ...[
           const SizedBox(height: 4),
           Text(
@@ -847,7 +1066,6 @@ class _QuestionBlock extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
-        // Widget jawaban
         child,
       ],
     );

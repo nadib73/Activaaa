@@ -1,5 +1,12 @@
 /// Model untuk hasil prediksi ML.
-/// Sesuai dengan collection `ml_results` di MongoDB.
+/// Sesuai MlResult.php + formatResult() PrediksiController.php
+///
+/// Catatan relasi dari MlResult.php:
+/// recommendations() → hasOne(Recommendation::class, 'result_id')
+/// Artinya recommendations adalah SATU object, bukan array langsung.
+/// Tapi di formatResult() Laravel sudah di-flatten:
+/// 'recommendations' => $result->recommendations
+/// Yang bisa berupa object Recommendation atau array teks.
 class MlResultModel {
   final String id;
   final String userId;
@@ -8,6 +15,7 @@ class MlResultModel {
   final double productivityScore;
   final double digitalDependenceScore;
   final bool highRiskFlag;
+  final String riskLevel;
   final List<String> recommendations;
   final DateTime createdAt;
 
@@ -21,81 +29,104 @@ class MlResultModel {
     required this.highRiskFlag,
     required this.recommendations,
     required this.createdAt,
+    this.riskLevel = 'Rendah',
   });
 
-  // ── From JSON (dari response Laravel) ─────────────────────────────────────
+  // ── From JSON ──────────────────────────────────────────────────────────────
   factory MlResultModel.fromJson(Map<String, dynamic> json) {
+    final q = json['questionnaire'] as Map<String, dynamic>?;
+    final userId =
+        q?['user_id']?.toString() ?? json['user_id']?.toString() ?? '';
+    final qId =
+        q?['_id']?.toString() ??
+        q?['id']?.toString() ??
+        json['questionnaire_id']?.toString() ??
+        '';
+
     return MlResultModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      userId: json['user_id'] ?? '',
-      questionnaireId: json['questionnaire_id'] ?? '',
-      focusScore: (json['focus_score'] ?? 0).toDouble(),
-      productivityScore: (json['productivity_score'] ?? 0).toDouble(),
-      digitalDependenceScore: (json['digital_dependence_score'] ?? 0)
-          .toDouble(),
-      highRiskFlag: json['high_risk_flag'] ?? false,
-      recommendations: json['recommendations'] != null
-          ? List<String>.from(json['recommendations'])
-          : [],
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      userId: userId,
+      questionnaireId: qId,
+      focusScore: _toDouble(json['focus_score']),
+      productivityScore: _toDouble(json['productivity_score']),
+      digitalDependenceScore: _toDouble(json['digital_dependence_score']),
+      highRiskFlag: json['high_risk_flag'] as bool? ?? false,
+      riskLevel: json['risk_level']?.toString() ?? 'Rendah',
+      recommendations: _parseRecommendations(json['recommendations']),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'user_id': userId,
-      'questionnaire_id': questionnaireId,
-      'focus_score': focusScore,
-      'productivity_score': productivityScore,
-      'digital_dependence_score': digitalDependenceScore,
-      'high_risk_flag': highRiskFlag,
-      'recommendations': recommendations,
-      'created_at': createdAt.toIso8601String(),
-    };
+  // ── Parse recommendations ──────────────────────────────────────────────────
+  // MlResult.php → recommendations() hasOne Recommendation
+  // Bisa berupa:
+  // 1. List<String>            → langsung pakai
+  // 2. List<Map>               → ambil field 'recommendation_text' atau 'text'
+  // 3. Map (single object)     → ambil field 'recommendations' (array di dalam)
+  // 4. null                    → return []
+  static List<String> _parseRecommendations(dynamic raw) {
+    if (raw == null) return [];
+
+    // Kasus 3: Object Recommendation tunggal (hasOne)
+    if (raw is Map<String, dynamic>) {
+      final inner = raw['recommendations'];
+      if (inner is List) return _parseRecommendations(inner);
+      final text =
+          raw['recommendation_text']?.toString() ?? raw['text']?.toString();
+      return text != null && text.isNotEmpty ? [text] : [];
+    }
+
+    // Kasus 1 & 2: List
+    if (raw is List) {
+      final result = <String>[];
+      for (final item in raw) {
+        if (item is String && item.isNotEmpty) {
+          result.add(item);
+        } else if (item is Map) {
+          final text =
+              item['recommendation_text']?.toString() ??
+              item['text']?.toString() ??
+              '';
+          if (text.isNotEmpty) result.add(text);
+        }
+      }
+      return result;
+    }
+
+    return [];
   }
+
+  static double _toDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString()) ?? 0.0;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'user_id': userId,
+    'questionnaire_id': questionnaireId,
+    'focus_score': focusScore,
+    'productivity_score': productivityScore,
+    'digital_dependence_score': digitalDependenceScore,
+    'high_risk_flag': highRiskFlag,
+    'risk_level': riskLevel,
+    'recommendations': recommendations,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Skor focus dalam skala 0–100 (int)
-  int get focusInt => (focusScore * 100).round();
-
-  /// Skor produktivitas dalam skala 0–100 (int)
+  int get focusInt => (focusScore * 100).round().clamp(0, 100);
   int get productivityInt => productivityScore.round().clamp(0, 100);
-
-  /// Skor dependensi dalam skala 0–100 (int)
   int get dependenceInt => digitalDependenceScore.round().clamp(0, 100);
 
-  /// Label risiko berdasarkan high_risk_flag
-  String get riskLabel => highRiskFlag ? 'High Risk' : 'Normal';
-
-  /// Tanggal format: "07 APR"
-  String get formattedDate {
-    const months = [
-      '',
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MEI',
-      'JUN',
-      'JUL',
-      'AGU',
-      'SEP',
-      'OKT',
-      'NOV',
-      'DES',
-    ];
-    return '${createdAt.day.toString().padLeft(2, '0')} '
-        '${months[createdAt.month]}';
-  }
-
-  /// Tanggal format: "07" (hari saja)
   String get dayStr => createdAt.day.toString().padLeft(2, '0');
-
-  /// Tanggal format: "APR" (bulan saja)
   String get monthStr {
-    const months = [
+    const m = [
       '',
       'JAN',
       'FEB',
@@ -110,10 +141,12 @@ class MlResultModel {
       'NOV',
       'DES',
     ];
-    return months[createdAt.month];
+    return m[createdAt.month];
   }
+
+  String get formattedDate => '$dayStr $monthStr';
 
   @override
   String toString() =>
-      'MlResultModel(focus: $focusScore, prod: $productivityScore, dep: $digitalDependenceScore)';
+      'MlResult(focus: $focusScore, prod: $productivityScore, dep: $digitalDependenceScore, risk: $riskLevel)';
 }

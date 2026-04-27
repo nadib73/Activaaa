@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../widgets/dot_indicator.dart';
 import '../../auth/screens/login_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -34,10 +35,10 @@ class OnboardingScreen extends StatelessWidget {
   }
 
   Widget _buildIconBox() {
-    return Image.asset(
-      'assets/images/logo.png',
-      width: 180,
-      height: 180,
+    return SvgPicture.asset(
+      'assets/images/NewLogoBiru.svg',
+      width: 100,
+      height: 100,
       fit: BoxFit.contain,
     );
   }

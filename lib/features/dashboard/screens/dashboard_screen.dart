@@ -144,14 +144,14 @@ class DashboardScreen extends ConsumerWidget {
   // ── Score Cards ────────────────────────────────────────────────────────────
 
   Widget _buildScoreCards(analytics) {
-    final focus = analytics?.avgFocus7Days != null
-        ? (analytics!.avgFocus7Days * 100).round().toString()
+    final focus = analytics?.avgFocusScore != null
+        ? (analytics!.avgFocusScore * 100).round().toString()
         : '--';
-    final prod = analytics?.avgProductivity7Days != null
-        ? analytics!.avgProductivity7Days.round().toString()
+    final prod = analytics?.avgProductivityScore != null
+        ? analytics!.avgProductivityScore.round().toString()
         : '--';
-    final dep = analytics?.avgDependence7Days != null
-        ? analytics!.avgDependence7Days.round().toString()
+    final dep = analytics?.avgDigitalDependence != null
+        ? analytics!.avgDigitalDependence.round().toString()
         : '--';
 
     return Row(
@@ -171,7 +171,7 @@ class DashboardScreen extends ConsumerWidget {
     final insightText =
         analytics?.insightText ??
         'Isi kuesioner untuk melihat insight pertamamu.';
-    final changeLabel = analytics?.focusChangeLabel ?? '';
+    final changeLabel = analytics?.focusChangeLabelFormatted ?? '';
     final isPositive = (analytics?.focusChangePercentage ?? 0) > 0;
 
     return Container(
@@ -256,7 +256,7 @@ class DashboardScreen extends ConsumerWidget {
   // ── Focus Chart ────────────────────────────────────────────────────────────
 
   Widget _buildFocusChartCard(analytics) {
-    final changeLabel = analytics?.focusChangeLabel ?? '';
+    final changeLabel = analytics?.focusChangeLabelFormatted ?? '';
 
     return Container(
       padding: const EdgeInsets.all(18),

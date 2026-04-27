@@ -16,12 +16,18 @@ class ResultService {
 
   // ── Get Hasil Terbaru ──────────────────────────────────────────────────────
   /// GET /api/prediksi/latest
+  /// Response: { success, data: { id, focus_score, ..., risk_level,
+  ///             recommendations, questionnaire, created_at } }
   Future<MlResultModel> getLatestResult() async {
     try {
       final response = await _client.get(ApiEndpoints.latestPrediksi);
-      final data = response.data as Map<String, dynamic>;
-      final result = data['data'] as Map<String, dynamic>? ?? data;
-      return MlResultModel.fromJson(result);
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>?;
+
+      if (data == null) {
+        throw 'Belum ada hasil prediksi. Isi kuesioner terlebih dahulu.';
+      }
+      return MlResultModel.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -29,11 +35,12 @@ class ResultService {
 
   // ── Get Semua Histori ──────────────────────────────────────────────────────
   /// GET /api/prediksi
+  /// Response: { success, data: [ ...formatResult() ] }
   Future<List<MlResultModel>> getHistory() async {
     try {
       final response = await _client.get(ApiEndpoints.prediksi);
-      final data = response.data as Map<String, dynamic>;
-      final list = data['data'] as List? ?? [];
+      final body = response.data as Map<String, dynamic>;
+      final list = body['data'] as List? ?? [];
       return list
           .map((e) => MlResultModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -43,6 +50,7 @@ class ResultService {
   }
 
   // ── Mock Data ──────────────────────────────────────────────────────────────
+
   Future<MlResultModel> getMockLatestResult() async {
     await Future.delayed(const Duration(milliseconds: 800));
     return MlResultModel(
@@ -53,6 +61,7 @@ class ResultService {
       productivityScore: 75,
       digitalDependenceScore: 60,
       highRiskFlag: true,
+      riskLevel: 'Sedang',
       recommendations: [
         'Kurangi penggunaan media sosial 30 menit per hari',
         'Tidur minimal 7 jam setiap malam',
@@ -73,6 +82,7 @@ class ResultService {
         productivityScore: 75,
         digitalDependenceScore: 60,
         highRiskFlag: true,
+        riskLevel: 'Tinggi',
         recommendations: ['Kurangi social media 30 menit per hari'],
         createdAt: DateTime(2025, 4, 7),
       ),
@@ -84,6 +94,7 @@ class ResultService {
         productivityScore: 70,
         digitalDependenceScore: 55,
         highRiskFlag: false,
+        riskLevel: 'Sedang',
         recommendations: ['Tingkatkan jam tidur'],
         createdAt: DateTime(2025, 4, 1),
       ),
@@ -95,6 +106,7 @@ class ResultService {
         productivityScore: 68,
         digitalDependenceScore: 58,
         highRiskFlag: false,
+        riskLevel: 'Sedang',
         recommendations: ['Olahraga 3x seminggu'],
         createdAt: DateTime(2025, 3, 22),
       ),
@@ -106,6 +118,7 @@ class ResultService {
         productivityScore: 65,
         digitalDependenceScore: 50,
         highRiskFlag: false,
+        riskLevel: 'Rendah',
         recommendations: ['Kurangi notifikasi HP'],
         createdAt: DateTime(2025, 3, 15),
       ),
