@@ -131,6 +131,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         age: 21,
         region: 'Asia',
         educationLevel: 'Bachelor',
+        dailyRole: 'user',
         createdAt: DateTime.now(),
       );
       await _service.saveMockSession(mockUser);
@@ -165,6 +166,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       age: age,
       region: region,
       educationLevel: educationLevel,
+      dailyRole: 'user',
       createdAt: DateTime.now(),
     );
     await _service.saveMockSession(mockUser);

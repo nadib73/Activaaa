@@ -43,9 +43,10 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
           gender: user.gender,
           region: user.region,
           educationLevel: user.educationLevel,
-          incomeLevel: 'Low', // fallback jika belum ada di UserModel
-          dailyRole: 'Student',
+          incomeLevel: 'Low',
+          dailyRole: user.dailyRole, // ← pastikan ada di UserModel
           deviceType: 'Android',
+          age: user.age, // ← TAMBAHKAN INI
         );
   }
 
@@ -113,7 +114,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _PageInfoDiri(),
                   _PagePenggunaanDigital(),
                   _PageAktivitasTidur(),
                   _PageKondisiMental(),
@@ -131,7 +131,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
   Widget _buildHeader(QuestionnaireState state) {
     const titles = [
-      'Info Diri',
       'Penggunaan Digital',
       'Aktivitas & Tidur',
       'Kondisi Mental',
@@ -510,11 +509,11 @@ class _PagePenggunaanDigital extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         children: [
-          // Q2 — Lama pakai perangkat
+          // Q1 — Lama pakai perangkat
           _QuestionBlock(
-            number: 2,
+            number: 1,
             question:
-                'Berapa lama kamu menggunakan perangkat digital per hari?',
+                'Berapa lama kamu menggunakan perangkat digital hari ini?',
             hint: 'Total semua perangkat (HP, laptop, tablet, dll)',
             child: Column(
               children: [
@@ -553,10 +552,10 @@ class _PagePenggunaanDigital extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q3 — Buka HP
+          // Q2 — Buka HP
           _QuestionBlock(
-            number: 3,
-            question: 'Seberapa sering kamu membuka HP dalam sehari?',
+            number: 2,
+            question: 'Seberapa sering kamu membuka HP hari ini?',
             hint: 'Estimasi berapa kali kamu cek / unlock HP',
             child: Column(
               children: [
@@ -595,10 +594,10 @@ class _PagePenggunaanDigital extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q4 — Notifikasi
+          // Q3 — Notifikasi
           _QuestionBlock(
-            number: 4,
-            question: 'Berapa banyak notifikasi yang kamu terima per hari?',
+            number: 3,
+            question: 'Berapa banyak notifikasi yang kamu terima hari ini?',
             hint: 'Gabungan semua aplikasi: WA, IG, email, dll',
             child: Column(
               children: [
@@ -637,10 +636,10 @@ class _PagePenggunaanDigital extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q5 — Sosmed
+          // Q4 — Sosmed
           _QuestionBlock(
-            number: 5,
-            question: 'Berapa lama kamu menggunakan media sosial per hari?',
+            number: 4,
+            question: 'Berapa lama kamu menggunakan media sosial hari ini?',
             hint: 'Instagram, TikTok, Twitter, YouTube, dll',
             child: Column(
               children: [
@@ -679,10 +678,10 @@ class _PagePenggunaanDigital extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q6 — Belajar/Kerja produktif
+          // Q5 — Belajar/Kerja produktif
           _QuestionBlock(
-            number: 6,
-            question: 'Seberapa produktif kamu belajar atau bekerja per hari?',
+            number: 5,
+            question: 'Seberapa produktif kamu belajar atau bekerja hari ini?',
             hint: 'Waktu fokus tanpa distraksi',
             child: Column(
               children: [
@@ -728,9 +727,9 @@ class _PagePenggunaanDigital extends ConsumerWidget {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HALAMAN 3 — AKTIVITAS & TIDUR
-// Q7: slider hari olahraga
-// Q8: slider jam tidur
-// Q9: pilihan kualitas tidur
+// Q6: slider hari olahraga
+// Q7: slider jam tidur
+// Q8: pilihan kualitas tidur
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _PageAktivitasTidur extends ConsumerWidget {
@@ -743,9 +742,9 @@ class _PageAktivitasTidur extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         children: [
-          // Q7 — Hari olahraga
+          // Q6 — Hari olahraga
           _QuestionBlock(
-            number: 7,
+            number: 6,
             question: 'Berapa hari kamu berolahraga dalam seminggu?',
             hint: 'Olahraga minimal 30 menit, termasuk jalan kaki',
             child: Column(
@@ -768,9 +767,9 @@ class _PageAktivitasTidur extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
-          // Q8 — Jam tidur
+          // Q7 — Jam tidur
           _QuestionBlock(
-            number: 8,
+            number: 7,
             question: 'Berapa jam kamu tidur per malam?',
             hint: 'Rata-rata dalam 7 hari terakhir',
             child: QuestionSlider(
@@ -787,9 +786,9 @@ class _PageAktivitasTidur extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
-          // Q9 — Kualitas tidur (pilihan)
+          // Q8 — Kualitas tidur (pilihan)
           _QuestionBlock(
-            number: 9,
+            number: 8,
             question: 'Bagaimana kualitas tidurmu secara umum?',
             hint: 'Pilih yang paling menggambarkan tidurmu',
             child: Column(
@@ -880,10 +879,10 @@ class _PageAktivitasTidur extends ConsumerWidget {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HALAMAN 4 — KONDISI MENTAL
-// Q10: Anxiety 0–27
-// Q11: Depresi  0–27
-// Q12: Stres    1–10
-// Q13: Happiness 0–10
+// Q9: Anxiety 0–27
+// Q10: Depresi  0–27
+// Q11: Stres    1–10
+// Q12: Happiness 0–10
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _PageKondisiMental extends ConsumerWidget {
@@ -899,9 +898,9 @@ class _PageKondisiMental extends ConsumerWidget {
           _buildDisclaimer(),
           const SizedBox(height: 24),
 
-          // Q10 — Anxiety (0–27, invertColor: tinggi = merah)
+          // Q9 — Anxiety (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 10,
+            number: 9,
             question: 'Seberapa sering kamu merasa cemas atau gelisah?',
             hint: '0 = tidak pernah cemas, 27 = sangat sering cemas',
             child: QuestionScalePicker(
@@ -916,9 +915,9 @@ class _PageKondisiMental extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q11 — Depresi (0–27, invertColor: tinggi = merah)
+          // Q10 — Depresi (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 11,
+            number: 10,
             question:
                 'Seberapa sering kamu merasa sedih atau tidak bersemangat?',
             hint: '0 = tidak pernah, 27 = hampir setiap saat',
@@ -934,9 +933,9 @@ class _PageKondisiMental extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q12 — Stres (1–10, invertColor: tinggi = merah)
+          // Q11 — Stres (1–10, invertColor: tinggi = merah)
           _QuestionBlock(
-            number: 12,
+            number: 11,
             question: 'Seberapa tinggi tingkat stres kamu saat ini?',
             hint: '1 = sangat santai, 10 = sangat stres',
             child: QuestionScalePicker(
@@ -951,9 +950,9 @@ class _PageKondisiMental extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Q13 — Happiness (0–10, normal: tinggi = hijau)
+          // Q12 — Happiness (0–10, normal: tinggi = hijau)
           _QuestionBlock(
-            number: 13,
+            number: 12,
             question: 'Seberapa bahagia kamu belakangan ini?',
             hint: '0 = sangat tidak bahagia, 10 = sangat bahagia',
             child: QuestionScalePicker(

@@ -26,6 +26,9 @@ dependencies:
   # ── UI Helpers ──────────────────────────────────────────────────────────────
   shimmer: ^3.0.0
 
+  # ── Google Sign-In (verifikasi akun Google saat register) ────────────────
+  google_sign_in: ^6.2.1
+
   # ── Icon ────────────────────────────────────────────────────────────────────
   cupertino_icons: ^1.0.2
 

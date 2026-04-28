@@ -1,5 +1,4 @@
-/// Model untuk data user.
-/// Sesuai dengan response dari AuthController Laravel.
+/// ── Model User ───────────────────────────────────────────────────────────────
 class UserModel {
   final String id;
   final String name;
@@ -8,6 +7,7 @@ class UserModel {
   final int age;
   final String region;
   final String educationLevel;
+  final String dailyRole; // <- TAMBAHAN
   final DateTime createdAt;
   final DateTime? lastLogin;
 
@@ -19,22 +19,22 @@ class UserModel {
     required this.age,
     required this.region,
     required this.educationLevel,
+    required this.dailyRole, // <- TAMBAHAN
     required this.createdAt,
     this.lastLogin,
   });
 
   // ── From JSON ──────────────────────────────────────────────────────────────
-  // Sesuai response dari auth()->user() Laravel
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      // MongoDB pakai _id, Laravel bisa return id atau _id
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      gender: json['gender'] ?? '',
+      name: json['name']?.toString() ?? 'User',
+      email: json['email']?.toString() ?? '',
+      gender: json['gender']?.toString().toLowerCase() ?? 'male',
       age: _parseInt(json['age']),
-      region: json['region'] ?? '',
-      educationLevel: json['education_level'] ?? '',
+      region: json['region']?.toString() ?? 'Asia',
+      educationLevel: json['education_level']?.toString() ?? 'Bachelor',
+      dailyRole: json['daily_role']?.toString() ?? '', // <- TAMBAHAN
       createdAt: _parseDate(json['created_at']),
       lastLogin: json['last_login'] != null
           ? DateTime.tryParse(json['last_login'].toString())
@@ -53,6 +53,7 @@ class UserModel {
     return DateTime.tryParse(val.toString()) ?? DateTime.now();
   }
 
+  // ── To JSON ────────────────────────────────────────────────────────────────
   Map<String, dynamic> toJson() => {
     '_id': id,
     'name': name,
@@ -61,15 +62,18 @@ class UserModel {
     'age': age,
     'region': region,
     'education_level': educationLevel,
+    'daily_role': dailyRole, // <- TAMBAHAN
     'created_at': createdAt.toIso8601String(),
   };
 
+  // ── Copy With ──────────────────────────────────────────────────────────────
   UserModel copyWith({
     String? name,
     String? gender,
     int? age,
     String? region,
     String? educationLevel,
+    String? dailyRole, // <- TAMBAHAN
   }) {
     return UserModel(
       id: id,
@@ -79,6 +83,7 @@ class UserModel {
       age: age ?? this.age,
       region: region ?? this.region,
       educationLevel: educationLevel ?? this.educationLevel,
+      dailyRole: dailyRole ?? this.dailyRole, // <- TAMBAHAN
       createdAt: createdAt,
       lastLogin: lastLogin,
     );
@@ -94,23 +99,11 @@ class UserModel {
   }
 
   @override
-  String toString() => 'UserModel(id: $id, name: $name, email: $email)';
+  String toString() =>
+      'UserModel(id: $id, name: $name, email: $email, dailyRole: $dailyRole)';
 }
 
-// ── Auth Response ──────────────────────────────────────────────────────────────
-/// Parse response dari POST /api/auth/login dan /api/auth/register
-///
-/// Format response Laravel:
-/// {
-///   "success": true,
-///   "message": "Login berhasil",
-///   "data": {
-///     "token": "eyJ...",
-///     "token_type": "bearer",
-///     "expires_in": 3600,
-///     "user": { ... }
-///   }
-/// }
+/// ── Auth Response (Login) ────────────────────────────────────────────────────
 class AuthResponse {
   final bool success;
   final String message;
@@ -129,15 +122,12 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // data bisa berisi token+user langsung
     final data = json['data'] as Map<String, dynamic>? ?? {};
 
-    // Token ada di data.token
     final token = data['token']?.toString() ?? '';
 
-    // User ada di data.user
     final userJson =
-        data['user'] as Map<String, dynamic>? ?? data as Map<String, dynamic>;
+        data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
     return AuthResponse(
       success: json['success'] as bool? ?? false,
@@ -145,22 +135,12 @@ class AuthResponse {
       token: token,
       tokenType: data['token_type']?.toString() ?? 'bearer',
       expiresIn: data['expires_in'] as int?,
-      user: UserModel.fromJson(userJson),
+      user: UserModel.fromJson(userJson), // <- otomatis bawa daily_role
     );
   }
 }
 
-// ── Register Response ──────────────────────────────────────────────────────────
-/// Format response register berbeda — token & user di dalam data
-///
-/// {
-///   "success": true,
-///   "message": "Registrasi berhasil",
-///   "data": {
-///     "user": { ... },
-///     "token": "eyJ..."
-///   }
-/// }
+/// ── Register Response ────────────────────────────────────────────────────────
 class RegisterResponse {
   final bool success;
   final String message;
@@ -176,11 +156,15 @@ class RegisterResponse {
 
   factory RegisterResponse.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>? ?? {};
+
+    final userJson =
+        data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
+
     return RegisterResponse(
       success: json['success'] as bool? ?? false,
       message: json['message']?.toString() ?? '',
       token: data['token']?.toString() ?? '',
-      user: UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? {}),
+      user: UserModel.fromJson(userJson), // <- otomatis bawa daily_role
     );
   }
 }

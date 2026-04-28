@@ -1,67 +1,50 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final localStorageProvider = Provider<LocalStorage>((ref) => LocalStorage());
+/// Provider untuk LocalStorage.
+final localStorageProvider = Provider<LocalStorage>((ref) {
+  return LocalStorage();
+});
 
 /// Mengelola penyimpanan data lokal menggunakan SharedPreferences.
-/// Menyimpan JWT token, expiry time, dan data user dasar.
-///
-/// JWT Config (dari jwt.php):
-/// - ttl         : 60 menit  → token expired 1 jam
-/// - refresh_ttl : 20160 menit (2 minggu)
+/// Digunakan untuk menyimpan JWT token dan data user yang sederhana.
 class LocalStorage {
   // ── Keys ───────────────────────────────────────────────────────────────────
-  static const _keyToken = 'auth_token';
-  static const _keyTokenExpiry = 'auth_token_expiry'; // timestamp expired
-  static const _keyUserId = 'user_id';
-  static const _keyUserName = 'user_name';
-  static const _keyUserEmail = 'user_email';
-  static const _keyIsLoggedIn = 'is_logged_in';
+  static const String _keyToken = 'auth_token';
+  static const String _keyUserId = 'user_id';
+  static const String _keyUserName = 'user_name';
+  static const String _keyUserEmail = 'user_email';
+  static const String _keyIsLoggedIn = 'is_logged_in';
 
   // ── Token ──────────────────────────────────────────────────────────────────
 
-  /// Simpan JWT token + hitung waktu expired (ttl = 60 menit dari jwt.php)
-  Future<void> saveToken(String token, {int ttlMinutes = 60}) async {
+  /// Simpan JWT token setelah login/register berhasil.
+  /// Token akan di-trim untuk menghilangkan whitespace yang tidak perlu.
+  Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    final expiry = DateTime.now()
-        .add(Duration(minutes: ttlMinutes))
-        .millisecondsSinceEpoch;
-    await prefs.setString(_keyToken, token);
-    await prefs.setInt(_keyTokenExpiry, expiry);
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) {
+      throw Exception('Token tidak boleh kosong');
+    }
+    await prefs.setString(_keyToken, trimmedToken);
   }
 
-  /// Ambil JWT token. Return null jika belum ada.
+  /// Ambil JWT token yang tersimpan.
+  /// Return null jika belum login.
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyToken);
   }
 
-  /// Cek apakah token sudah expired berdasarkan TTL lokal
-  /// (sebagai early check sebelum hit server)
-  Future<bool> isTokenExpired() async {
-    final prefs = await SharedPreferences.getInstance();
-    final expiry = prefs.getInt(_keyTokenExpiry);
-    if (expiry == null) return true;
-    return DateTime.now().millisecondsSinceEpoch > expiry;
-  }
-
-  /// Sisa waktu token dalam menit (untuk keperluan debug)
-  Future<int> tokenRemainingMinutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final expiry = prefs.getInt(_keyTokenExpiry);
-    if (expiry == null) return 0;
-    final remaining = expiry - DateTime.now().millisecondsSinceEpoch;
-    return remaining > 0 ? (remaining / 60000).floor() : 0;
-  }
-
+  /// Hapus token saat logout.
   Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
-    await prefs.remove(_keyTokenExpiry);
   }
 
   // ── User Data ──────────────────────────────────────────────────────────────
 
+  /// Simpan data user dasar setelah login.
   Future<void> saveUserData({
     required String userId,
     required String name,
@@ -74,24 +57,35 @@ class LocalStorage {
     await prefs.setBool(_keyIsLoggedIn, true);
   }
 
-  Future<String?> getUserId() async =>
-      (await SharedPreferences.getInstance()).getString(_keyUserId);
-  Future<String?> getUserName() async =>
-      (await SharedPreferences.getInstance()).getString(_keyUserName);
-  Future<String?> getUserEmail() async =>
-      (await SharedPreferences.getInstance()).getString(_keyUserEmail);
+  /// Ambil user ID yang tersimpan.
+  Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserId);
+  }
 
-  /// Cek apakah user sudah login (ada token & flag login)
+  /// Ambil nama user yang tersimpan.
+  Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserName);
+  }
+
+  /// Ambil email user yang tersimpan.
+  Future<String?> getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserEmail);
+  }
+
+  /// Cek apakah user sudah login.
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_keyToken);
     final loggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
-    return loggedIn && token != null && token.isNotEmpty;
+    return loggedIn && token != null;
   }
 
   // ── Clear All ──────────────────────────────────────────────────────────────
 
-  /// Hapus semua data lokal (dipanggil saat logout)
+  /// Hapus semua data lokal saat logout.
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

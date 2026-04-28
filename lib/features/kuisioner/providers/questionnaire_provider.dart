@@ -19,7 +19,7 @@ class QuestionnaireState {
   // Halaman 2: Penggunaan Digital (Q8–Q12)
   // Halaman 3: Aktivitas & Tidur (Q13–Q15)
   // Halaman 4: Kondisi Mental (Q16–Q19)
-  static const int totalPages = 4;
+  static const int totalPages = 3;
 
   const QuestionnaireState({
     this.status = QuestionnaireStatus.initial,
@@ -63,24 +63,24 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 
   // ── Setter dari Register (diisi otomatis dari user data) ───────────────────
   void setFromUserData({
-    required String gender,
-    required String region,
-    required String educationLevel,
-    required String incomeLevel,
-    required String dailyRole,
-    required String deviceType,
-  }) {
-    updateForm(
-      state.form.copyWith(
-        gender: gender,
-        region: region,
-        educationLevel: educationLevel,
-        incomeLevel: incomeLevel,
-        dailyRole: dailyRole,
-        deviceType: deviceType,
-      ),
-    );
-  }
+  required String gender,
+  required String region,
+  required String educationLevel,
+  required String incomeLevel,
+  required String dailyRole,
+  required String deviceType,
+  required int    age,          // ← TAMBAHKAN INI
+}) {
+  updateForm(state.form.copyWith(
+    gender        : gender,
+    region        : region,
+    educationLevel: educationLevel,
+    incomeLevel   : incomeLevel,
+    dailyRole     : dailyRole,
+    deviceType    : deviceType,
+    age           : age,        // ← TAMBAHKAN INI
+  ));
+}
 
   // ── Setter Q7 ──────────────────────────────────────────────────────────────
   void setAge(int v) => updateForm(state.form.copyWith(age: v));

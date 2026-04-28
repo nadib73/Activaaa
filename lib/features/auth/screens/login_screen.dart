@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
@@ -12,7 +13,7 @@ import '../../dashboard/screens/dashboard_screen.dart';
 // true  = mock login (backend belum terhubung)
 // false = real API Laravel
 // ─────────────────────────────────────────────────────────────────────────────
-const bool _useMockLogin = true;
+const bool _useMockLogin = false;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -21,25 +22,75 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _emailValid = false;
   bool _passValid = false;
 
+  // ── Validation state ────────────────────────────────────────────────────
+  bool _submitted = false; // true setelah pertama kali tekan "Masuk"
+  String? _emailError;
+  String? _passwordError;
+
+  // ── Shake animation ─────────────────────────────────────────────────────
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -8), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 6, end: -3), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -3, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
   // ── Validasi ───────────────────────────────────────────────────────────────
 
+  static final _emailRegex = RegExp(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  );
+
+  String? _validateEmail(String value) {
+    if (value.isEmpty) return 'Email wajib diisi';
+    if (!_emailRegex.hasMatch(value)) return 'Format email tidak valid';
+    return null;
+  }
+
+  String? _validatePassword(String value) {
+    if (value.isEmpty) return 'Password wajib diisi';
+    if (value.length < 6) return 'Password minimal 6 karakter';
+    return null;
+  }
+
   void _onEmailChanged(String val) {
+    final trimmed = val.trim();
     setState(() {
-      _emailValid = val.contains('@') && val.contains('.');
+      _emailValid = _emailRegex.hasMatch(trimmed);
+      if (_submitted) {
+        _emailError = _validateEmail(trimmed);
+      }
     });
     ref.read(authProvider.notifier).clearError();
   }
@@ -47,6 +98,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _onPasswordChanged(String val) {
     setState(() {
       _passValid = val.length >= 6;
+      if (_submitted) {
+        _passwordError = _validatePassword(val);
+      }
     });
     ref.read(authProvider.notifier).clearError();
   }
@@ -54,12 +108,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ── Login ──────────────────────────────────────────────────────────────────
 
   Future<void> _onLogin() async {
-    // Validasi ulang sebelum submit
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) return;
-    if (!_emailValid || !_passValid) return;
+    // Mark as submitted so errors show from now on
+    setState(() {
+      _submitted = true;
+      _emailError = _validateEmail(email);
+      _passwordError = _validatePassword(password);
+    });
+
+    // If any validation errors exist, shake & vibrate
+    if (_emailError != null || _passwordError != null) {
+      _shakeController.forward(from: 0);
+      HapticFeedback.mediumImpact();
+      return;
+    }
 
     bool success = false;
 
@@ -194,6 +258,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             isValid: _emailValid,
+            errorText: _emailError,
             onChanged: _onEmailChanged,
           ),
           const SizedBox(height: 16),
@@ -204,6 +269,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _passwordController,
             isPassword: true,
             isValid: _passValid,
+            errorText: _passwordError,
             onChanged: _onPasswordChanged,
           ),
           const SizedBox(height: 8),
@@ -254,6 +320,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               setState(() {
                 _emailValid = true;
                 _passValid = true;
+                _emailError = null;
+                _passwordError = null;
               });
             },
             child: Container(
@@ -280,54 +348,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ── Login Button ───────────────────────────────────────────────────────────
 
   Widget _buildLoginButton(bool isLoading) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _onLogin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.teal,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.teal.withValues(alpha: 0.6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+    return AnimatedBuilder(
+      animation: _shakeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_shakeAnimation.value, 0),
+          child: child,
+        );
+      },
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : _onLogin,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.teal,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.teal.withValues(alpha: 0.6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0,
           ),
-          elevation: 0,
+          child: isLoading
+              ? const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Sedang masuk...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                )
+              : const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.arrow_forward_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Masuk',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
         ),
-        child: isLoading
-            ? const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Sedang masuk...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.arrow_forward_rounded, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'Masuk',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
       ),
     );
   }
