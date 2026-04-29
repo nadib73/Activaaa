@@ -101,15 +101,20 @@ class AnalisisCard extends StatelessWidget {
   }
 
   Widget _buildBadges() {
+    final isHighRisk = data.category.toLowerCase() == 'tinggi';
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       children: [
-        _scoreBadge('Focus ${data.focus}', AppColors.teal),
-        _scoreBadge('Prod ${data.prod}', AppColors.blue),
         _scoreBadge(
-          'Dep ${data.dep}${data.depHigh ? ' !' : ''}',
-          data.depHigh ? AppColors.red : AppColors.amber,
+          'Dep ${data.dep}',
+          isHighRisk ? AppColors.red : AppColors.amber,
+        ),
+        _scoreBadge(
+          data.category.isNotEmpty
+              ? data.category[0].toUpperCase() + data.category.substring(1)
+              : 'N/A',
+          isHighRisk ? AppColors.red : AppColors.teal,
         ),
         if (data.note != null && data.noteColor != null)
           _scoreBadge(data.note!, data.noteColor!),

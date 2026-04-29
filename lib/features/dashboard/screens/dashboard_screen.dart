@@ -144,23 +144,13 @@ class DashboardScreen extends ConsumerWidget {
   // ── Score Cards ────────────────────────────────────────────────────────────
 
   Widget _buildScoreCards(analytics) {
-    final focus = analytics?.avgFocusScore != null
-        ? (analytics!.avgFocusScore * 100).round().toString()
-        : '--';
-    final prod = analytics?.avgProductivityScore != null
-        ? analytics!.avgProductivityScore.round().toString()
-        : '--';
-    final dep = analytics?.avgDigitalDependence != null
-        ? analytics!.avgDigitalDependence.round().toString()
+    final dep = analytics?.avgDependenceScore != null
+        ? analytics!.avgDependenceScore.round().toString()
         : '--';
 
     return Row(
       children: [
-        ScoreCard(label: 'Focus\nScore', value: focus, color: AppColors.teal),
-        const SizedBox(width: 10),
-        ScoreCard(label: 'Produktivitas', value: prod, color: AppColors.amber),
-        const SizedBox(width: 10),
-        ScoreCard(label: 'Dependensi', value: dep, color: AppColors.red),
+        ScoreCard(label: 'Skor\nDependensi', value: dep, color: AppColors.red),
       ],
     );
   }
@@ -171,8 +161,9 @@ class DashboardScreen extends ConsumerWidget {
     final insightText =
         analytics?.insightText ??
         'Isi kuesioner untuk melihat insight pertamamu.';
-    final changeLabel = analytics?.focusChangeLabelFormatted ?? '';
-    final isPositive = (analytics?.focusChangePercentage ?? 0) > 0;
+    final changeLabel = analytics?.dependenceChangeLabelFormatted ?? '';
+    // Untuk dependensi: turun = positif (membaik)
+    final isPositive = (analytics?.dependenceChangePercentage ?? 0) < 0;
 
     return Container(
       width: double.infinity,
@@ -227,7 +218,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            'Focus $label minggu ini',
+            'Dependensi $label minggu ini',
             style: TextStyle(
               color: color,
               fontSize: 12,
@@ -253,10 +244,10 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  // ── Focus Chart ────────────────────────────────────────────────────────────
+  // ── Dependence Chart ────────────────────────────────────────────────────────
 
   Widget _buildFocusChartCard(analytics) {
-    final changeLabel = analytics?.focusChangeLabelFormatted ?? '';
+    final changeLabel = analytics?.dependenceChangeLabelFormatted ?? '';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -272,7 +263,7 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Focus Score',
+                'Skor Dependensi',
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,

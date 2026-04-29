@@ -159,13 +159,14 @@ class HistoriScreen extends ConsumerWidget {
 
   Widget _buildPerkembanganBanner(WidgetRef ref) {
     final hasPerkembangan = ref.watch(hasPerkembanganProvider);
-    final focusChange = ref.watch(focusChangeProvider);
+    final depChange = ref.watch(dependenceChangeProvider);
 
     if (!hasPerkembangan) return const SizedBox.shrink();
 
-    final changeText = focusChange >= 0
-        ? 'Focus naik ${focusChange.toStringAsFixed(0)}% dalam 30 hari terakhir'
-        : 'Focus turun ${focusChange.abs().toStringAsFixed(0)}% dalam 30 hari terakhir';
+    // Untuk dependensi: turun = membaik
+    final changeText = depChange < 0
+        ? 'Dependensi turun ${depChange.abs().toStringAsFixed(0)}% — semakin membaik!'
+        : 'Dependensi naik ${depChange.toStringAsFixed(0)}% — perlu perhatian';
 
     return PerkembanganCard(title: 'Perkembangan Diri', subtitle: changeText);
   }

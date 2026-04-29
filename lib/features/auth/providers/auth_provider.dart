@@ -80,10 +80,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String email,
     required String password,
     required String passwordConfirmation,
-    required int age,
     required String gender,
     required String educationLevel,
     required String region,
+    DateTime? dateOfBirth,
+    String? dailyRole,
+    String? incomeLevel,
   }) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
@@ -92,10 +94,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         email: email,
         password: password,
         passwordConfirmation: passwordConfirmation,
-        age: age,
         gender: gender,
         educationLevel: educationLevel,
         region: region,
+        dateOfBirth: dateOfBirth,
+        dailyRole: dailyRole,
+        incomeLevel: incomeLevel,
       );
       state = AuthState(status: AuthStatus.authenticated, user: response.user);
       return true;
@@ -127,11 +131,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         id: 'mock_001',
         name: _nameFromEmail(email),
         email: email.trim().toLowerCase(),
-        gender: 'male',
+        gender: 'Male',
+        dateOfBirth: DateTime(2005, 1, 1),
         age: 21,
         region: 'Asia',
         educationLevel: 'Bachelor',
-        dailyRole: 'user',
+        dailyRole: 'Student',
+        incomeLevel: 'Low',
         createdAt: DateTime.now(),
       );
       await _service.saveMockSession(mockUser);
@@ -150,10 +156,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> mockRegister({
     required String name,
     required String email,
-    required int age,
     required String gender,
     required String educationLevel,
     required String region,
+    DateTime? dateOfBirth,
+    String? dailyRole,
+    String? incomeLevel,
   }) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     await Future.delayed(const Duration(seconds: 1));
@@ -162,11 +170,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       id: 'mock_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
       email: email.trim().toLowerCase(),
-      gender: gender.toLowerCase(),
-      age: age,
+      gender: gender,
+      dateOfBirth: dateOfBirth,
+      age: dateOfBirth != null
+          ? DateTime.now().difference(dateOfBirth).inDays ~/ 365
+          : 20,
       region: region,
       educationLevel: educationLevel,
-      dailyRole: 'user',
+      dailyRole: dailyRole ?? 'Student',
+      incomeLevel: incomeLevel ?? 'Low',
       createdAt: DateTime.now(),
     );
     await _service.saveMockSession(mockUser);

@@ -132,22 +132,16 @@ class HasilPrediksiScreen extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         ScoreCircle(
-          score: data.focusInt.toString(),
-          label: 'Focus',
-          color: AppColors.teal,
-          percent: data.focusScore,
-        ),
-        ScoreCircle(
-          score: data.productivityInt.toString(),
-          label: 'Produktif',
-          color: AppColors.amber,
-          percent: data.productivityScore / 100,
-        ),
-        ScoreCircle(
           score: data.dependenceInt.toString(),
           label: 'Dependensi',
           color: AppColors.red,
           percent: data.digitalDependenceScore / 100,
+        ),
+        ScoreCircle(
+          score: '${data.confidenceInt}%',
+          label: 'Confidence',
+          color: AppColors.teal,
+          percent: data.confidence,
         ),
       ],
     );
@@ -156,11 +150,14 @@ class HasilPrediksiScreen extends ConsumerWidget {
   // ── Risk Badge ─────────────────────────────────────────────────────────────
 
   Widget _buildRiskBadge(MlResultModel data) {
-    final color = data.highRiskFlag ? AppColors.red : AppColors.teal;
-    final label = data.highRiskFlag
-        ? 'High Risk — Dependensi Digital Tinggi'
-        : 'Normal — Gaya Hidup Digital Sehat';
-    final icon = data.highRiskFlag
+    final isHighRisk = data.category.toLowerCase() == 'tinggi';
+    final color = isHighRisk ? AppColors.red : AppColors.teal;
+    final label = isHighRisk
+        ? 'Risiko Tinggi — Dependensi Digital'
+        : data.category.toLowerCase() == 'sedang'
+        ? 'Sedang — Perlu Perhatian'
+        : 'Rendah — Gaya Hidup Digital Sehat';
+    final icon = isHighRisk
         ? Icons.warning_amber_rounded
         : Icons.check_circle_outline_rounded;
 
@@ -279,27 +276,19 @@ class HasilPrediksiScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           _buildScoreBar(
-            label: 'Focus Score',
-            value: data.focusScore,
-            max: 1.0,
-            color: AppColors.teal,
-            display: '${data.focusInt}/100',
-          ),
-          const SizedBox(height: 12),
-          _buildScoreBar(
-            label: 'Produktivitas',
-            value: data.productivityScore,
-            max: 100,
-            color: AppColors.amber,
-            display: '${data.productivityInt}/100',
-          ),
-          const SizedBox(height: 12),
-          _buildScoreBar(
             label: 'Dependensi Digital',
             value: data.digitalDependenceScore,
             max: 100,
             color: AppColors.red,
             display: '${data.dependenceInt}/100',
+          ),
+          const SizedBox(height: 12),
+          _buildScoreBar(
+            label: 'Confidence ML',
+            value: data.confidence,
+            max: 1.0,
+            color: AppColors.teal,
+            display: '${data.confidenceInt}%',
           ),
         ],
       ),
