@@ -1,26 +1,35 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../widgets/line_chart_widget.dart';
 import '../widgets/dependence_line_chart.dart';
 import '../widgets/screen_time_row.dart';
+import '../widgets/bar_chart_widget.dart';
 import '../../histori/screens/histori_screen.dart';
+import '../../histori/providers/histori_provider.dart';
+import '../../kuisioner/screens/kuesioner_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
-class GrafikScreen extends StatefulWidget {
+class GrafikScreen extends ConsumerStatefulWidget {
   const GrafikScreen({super.key});
 
   @override
-  State<GrafikScreen> createState() => _GrafikScreenState();
+  ConsumerState<GrafikScreen> createState() => _GrafikScreenState();
 }
 
-class _GrafikScreenState extends State<GrafikScreen> {
+class _GrafikScreenState extends ConsumerState<GrafikScreen> {
   int _selectedPeriod = 1; // 0=7Hari, 1=Bulanan, 2=3Bulan
 
   static const _periods = ['7 Hari', 'Bulanan', '3 Bulan'];
 
   @override
   Widget build(BuildContext context) {
+    final historiState = ref.watch(historiProvider);
+    final historyCount = historiState.items.length;
+    final isLocked = historyCount < 14;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: SafeArea(
@@ -28,26 +37,35 @@ class _GrafikScreenState extends State<GrafikScreen> {
           children: [
             _buildHeader(),
             Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.bgLight,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      _buildPeriodSelector(),
-                      const SizedBox(height: 20),
-                      _buildFocusProdCard(),
-                      const SizedBox(height: 16),
-                      _buildScreenTimeCard(),
-                      const SizedBox(height: 16),
-                      _buildDependenceCard(),
-                      const SizedBox(height: 8),
-                    ],
+              child: Stack(
+                children: [
+                  // Main Content
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.bgLight,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          _buildPeriodSelector(),
+                          const SizedBox(height: 20),
+                          _buildFocusProdCard(),
+                          const SizedBox(height: 16),
+                          _buildActivityBarCard(),
+                          const SizedBox(height: 16),
+                          _buildDependenceCard(),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+
+                  // Lock Overlay
+                  if (isLocked) _buildLockOverlay(historyCount),
+                ],
               ),
             ),
             BottomNav(
@@ -56,6 +74,104 @@ class _GrafikScreenState extends State<GrafikScreen> {
               onTap: (i) => _onNavTap(context, i),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Locked UI ──────────────────────────────────────────────────────────────
+
+  Widget _buildLockOverlay(int currentCount) {
+    return Positioned.fill(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            color: Colors.white.withValues(alpha: 0.3),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgWhite,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.lock_person_rounded,
+                    color: AppColors.teal,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Fitur Terkunci',
+                  style: TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Text(
+                    'Isi kuesioner sebanyak 14 kali untuk membuka fitur ini',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textDark.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                // Progress indicator
+                Container(
+                  width: 200,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: AppColors.teal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (currentCount / 14).clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.teal,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.teal.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$currentCount / 14 Kuesioner',
+                  style: const TextStyle(
+                    color: AppColors.teal,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -71,7 +187,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
       case 1:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const HistoriScreen()),
+          MaterialPageRoute(builder: (_) => const KuesionerScreen()),
         );
         break;
       case 3:
@@ -92,7 +208,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
           Text(
-            'Visualisasi Data',
+            'Laporan Perkembangan Diri',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 24,
@@ -101,7 +217,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
           ),
           SizedBox(height: 4),
           Text(
-            'Tren gaya hidup digital kamu',
+            'Analisis gaya hidup digitalmu dalam 14 hari',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
@@ -163,7 +279,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Focus vs\nProduktivitas',
+                'Focus vs Produktivitas',
                 style: TextStyle(
                   color: AppColors.textDark,
                   fontSize: 16,
@@ -189,51 +305,29 @@ class _GrafikScreenState extends State<GrafikScreen> {
     );
   }
 
-  Widget _buildScreenTimeCard() {
+  Widget _buildActivityBarCard() {
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Screen Time\nHarian',
+                'Aktivitas Harian',
                 style: TextStyle(
                   color: AppColors.textDark,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  height: 1.3,
                 ),
               ),
-              _badge('Perlu\nDikurangi', AppColors.red, center: true),
+              _badge('Stabil', AppColors.blue),
             ],
           ),
-          const SizedBox(height: 18),
-          const ScreenTimeRow(
-            label: 'Social',
-            hours: 3.2,
-            color: AppColors.red,
-            ratio: 3.2 / 5,
-          ),
-          const ScreenTimeRow(
-            label: 'Belajar',
-            hours: 2.0,
-            color: AppColors.teal,
-            ratio: 2.0 / 5,
-          ),
-          const ScreenTimeRow(
-            label: 'Hiburan',
-            hours: 2.4,
-            color: AppColors.amber,
-            ratio: 2.4 / 5,
-          ),
-          ScreenTimeRow(
-            label: 'Lainnya',
-            hours: 0.9,
-            color: Colors.grey.shade400,
-            ratio: 0.9 / 5,
+          const SizedBox(height: 20),
+          const BarChartWidget(
+            values: [8.5, 7.2, 9.0, 6.5, 8.0, 7.5, 8.8],
+            labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
           ),
         ],
       ),
@@ -277,7 +371,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -291,7 +385,7 @@ class _GrafikScreenState extends State<GrafikScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

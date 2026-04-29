@@ -11,6 +11,8 @@ import '../widgets/setting_item_toggle.dart';
 import '../../histori/screens/histori_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
 
+import '../../kuisioner/screens/kuesioner_screen.dart';
+
 class ProfilScreen extends ConsumerStatefulWidget {
   const ProfilScreen({super.key});
 
@@ -24,6 +26,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   void _onNavTap(int index) {
+    if (index == 3) return; // Sudah di profil
+
     switch (index) {
       case 0:
         Navigator.popUntil(context, (route) => route.isFirst);
@@ -31,13 +35,13 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       case 1:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const HistoriScreen()),
+          MaterialPageRoute(builder: (context) => const KuesionerScreen()),
         );
         break;
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const GrafikScreen()),
+          MaterialPageRoute(builder: (context) => const GrafikScreen()),
         );
         break;
     }

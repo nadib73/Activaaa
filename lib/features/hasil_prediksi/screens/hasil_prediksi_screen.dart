@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/bottom_nav.dart';
 import '../../kuisioner/providers/questionnaire_provider.dart';
 import '../models/ml_result_model.dart';
 import '../providers/result_provider.dart';
 import '../widgets/score_circle.dart';
 import '../widgets/trend_bar_chart.dart';
-import '../../grafik/screens/grafik_screen.dart';
 import '../../histori/screens/histori_screen.dart';
+import '../../../shared/widgets/bottom_nav.dart';
+import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
 class HasilPrediksiScreen extends ConsumerWidget {
@@ -33,28 +33,35 @@ class HasilPrediksiScreen extends ConsumerWidget {
             Expanded(
               child: data == null
                   ? _buildLoading()
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          _buildHeader(data),
-                          const SizedBox(height: 24),
-                          _buildScoreCircles(data),
-                          const SizedBox(height: 16),
-                          _buildRiskBadge(data),
-                          const SizedBox(height: 20),
-                          _buildRekomendasiCard(data),
-                          const SizedBox(height: 16),
-                          _buildScoreDetailCard(data),
-                          const SizedBox(height: 16),
-                          _buildTrendCard(),
-                          const SizedBox(height: 20),
-                          _buildHistoriButton(context),
-                        ],
-                      ),
+                  : Column(
+                      children: [
+                        _buildHeader(context, data),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 12),
+                                _buildScoreCircles(data),
+                                const SizedBox(height: 16),
+                                _buildRiskBadge(data),
+                                const SizedBox(height: 20),
+                                _buildRekomendasiCard(data),
+                                const SizedBox(height: 16),
+                                _buildScoreDetailCard(data),
+                                const SizedBox(height: 16),
+                                _buildTrendCard(),
+                                const SizedBox(height: 20),
+                                _buildHistoriButton(context),
+                                const SizedBox(height: 30),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
             ),
-            BottomNav(currentIndex: 0, onTap: (i) => _onNavTap(context, i)),
+            BottomNav(currentIndex: 1, onTap: (i) => _onNavTap(context, i)),
           ],
         ),
       ),
@@ -65,6 +72,12 @@ class HasilPrediksiScreen extends ConsumerWidget {
 
   void _onNavTap(BuildContext context, int index) {
     switch (index) {
+      case 0:
+        Navigator.popUntil(context, (route) => route.isFirst);
+        break;
+      case 1:
+        // Sudah di flow kuesioner, tidak perlu pindah jika tidak perlu
+        break;
       case 2:
         Navigator.push(
           context,
@@ -79,8 +92,6 @@ class HasilPrediksiScreen extends ConsumerWidget {
         break;
     }
   }
-
-  // ── Loading ────────────────────────────────────────────────────────────────
 
   Widget _buildLoading() {
     return const Center(
@@ -100,28 +111,55 @@ class HasilPrediksiScreen extends ConsumerWidget {
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(MlResultModel data) {
-    return Column(
-      children: [
-        const Text(
-          'Hasil Analisis',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Gaya Hidup Digital Kamu',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+  Widget _buildHeader(BuildContext context, MlResultModel data) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 16, 20, 16),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          data.formattedDate,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-      ],
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hasil Analisis',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Gaya Hidup Digital Kamu',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.teal.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.teal.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              data.formattedDate,
+              style: const TextStyle(
+                color: AppColors.teal,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

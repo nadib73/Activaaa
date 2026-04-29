@@ -11,7 +11,7 @@ import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
 
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB
-const bool _useMockSurvey = false;
+const bool _useMockSurvey = true;
 
 class KuesionerScreen extends ConsumerStatefulWidget {
   const KuesionerScreen({super.key});
@@ -75,6 +75,14 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
+      );
+    } else if (!success && mounted) {
+      final error = ref.read(questionnaireProvider).errorMessage ?? 'Gagal memproses data';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
