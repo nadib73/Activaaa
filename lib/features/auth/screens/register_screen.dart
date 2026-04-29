@@ -25,36 +25,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _konfirmasiController = TextEditingController();
-  final _umurController = TextEditingController();
 
-  String _gender = 'Male';
-  String _pendidikan = 'Bachelor';
+  String _gender = 'Laki-laki';
+  String _pendidikan = 'Sarjana';
   String _region = 'Asia';
   DateTime? _tglLahir;
-  String _dailyRole = 'Student';
+  String _dailyRole = 'Pelajar/Mahasiswa';
+  String _incomeLevel = 'Rendah';
 
-  static const _genderOptions = ['Male', 'Female'];
+  static const _genderOptions = ['Laki-laki', 'Perempuan'];
   static const _pendidikanOptions = [
-    'SMA',
-    'Diploma',
-    'Bachelor',
-    'Master',
-    'Doctor',
+    'SMA/SMK/Sederajat',
+    'Sarjana',
+    'Magister',
+    'Doktor',
   ];
   static const _regionOptions = [
+    'Afrika',
     'Asia',
-    'Europe',
-    'America',
-    'Africa',
-    'Australia',
+    'Eropa',
+    'Timur Tengah',
+    'Amerika Utara',
+    'Amerika Selatan',
   ];
   static const _roleOptions = [
-    'Student',
-    'Full-time Employee',
-    'Part-time Employee',
-    'Freelancer',
-    'Caregiver',
-    'Unemployed',
+    'Pelajar/Mahasiswa',
+    'Karyawan Penuh waktu',
+    'Karyawan Paruh waktu',
+    'Pengurus rumah tangga',
+    'Tidak bekerja/sedang mencari kerja',
+  ];
+  static const _incomeOptions = [
+    'Rendah',
+    'Menengah Bawah',
+    'Menengah Atas',
+    'Tinggi',
   ];
 
   // ── Validation state ────────────────────────────────────────────────────
@@ -63,7 +68,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   String? _emailError;
   String? _passwordError;
   String? _konfirmasiError;
-  String? _umurError;
+  String? _tglLahirError;
+
+  // ── Manual email entry (when Google is not used) ────────────────────────
+  final _manualEmailController = TextEditingController();
 
   // ── Google Sign-In verification ─────────────────────────────────────────
   bool _googleVerified = false;
@@ -108,9 +116,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   void dispose() {
     _namaController.dispose();
     _emailController.dispose();
+    _manualEmailController.dispose();
     _passwordController.dispose();
     _konfirmasiController.dispose();
-    _umurController.dispose();
     _shakeController.dispose();
     super.dispose();
   }
@@ -162,7 +170,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   String? _validateEmail(String value) {
-    if (!_googleVerified) return 'Email harus diverifikasi dengan Google';
     if (value.isEmpty) return 'Email wajib diisi';
     if (!_emailRegex.hasMatch(value)) return 'Format email tidak valid';
     return null;
@@ -182,14 +189,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   String? _validateKonfirmasi(String value) {
     if (value.isEmpty) return 'Konfirmasi password wajib diisi';
     if (value != _passwordController.text) return 'Password tidak cocok';
-    return null;
-  }
-
-  String? _validateUmur(String value) {
-    if (value.isEmpty) return 'Umur wajib diisi';
-    final age = int.tryParse(value);
-    if (age == null) return 'Masukkan angka yang valid';
-    if (age < 10 || age > 120) return 'Umur harus antara 10-120';
     return null;
   }
 
@@ -234,13 +233,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     ref.read(authProvider.notifier).clearError();
   }
 
-  void _onUmurChanged(String val) {
-    setState(() {
-      if (_submitted) _umurError = _validateUmur(val.trim());
-    });
-    ref.read(authProvider.notifier).clearError();
-  }
-
   // ── Computed validity (for green check icons) ──────────────────────────
 
   bool get _namaValid =>
@@ -254,19 +246,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       _konfirmasiController.text == _passwordController.text &&
       _passValid;
 
-  bool get _umurValid {
-    final age = int.tryParse(_umurController.text);
-    return age != null && age >= 10 && age <= 120;
-  }
-
   // ── Submit ─────────────────────────────────────────────────────────────
 
   Future<void> _onRegister() async {
     final nama = _namaController.text.trim();
-    final email = _emailController.text.trim();
+    // Use Google-verified email if available, otherwise use manual email
+    final email = _googleVerified
+        ? _emailController.text.trim()
+        : _manualEmailController.text.trim();
     final password = _passwordController.text;
     final konfirmasi = _konfirmasiController.text;
-    final umur = _umurController.text.trim();
+    final umur = _ageFromBirthdate;
+
+    // Sync manual email to main controller if not Google-verified
+    if (!_googleVerified) {
+      _emailController.text = _manualEmailController.text.trim();
+    }
 
     // Mark as submitted → show all errors
     setState(() {
@@ -275,7 +270,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       _emailError = _validateEmail(email);
       _passwordError = _validatePassword(password);
       _konfirmasiError = _validateKonfirmasi(konfirmasi);
-      _umurError = _validateUmur(umur);
+      _tglLahirError = _validateTglLahir();
     });
 
     // If any errors, shake & vibrate
@@ -284,19 +279,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         _emailError != null ||
         _passwordError != null ||
         _konfirmasiError != null ||
-        _umurError != null;
+        _tglLahirError != null;
 
     if (hasError) {
       _shakeController.forward(from: 0);
       HapticFeedback.mediumImpact();
       return;
     }
-    if (_tglLahir == null) {
-      // tampilkan error
-      return;
-    }
     // Clear error sebelumnya
     ref.read(authProvider.notifier).clearError();
+
+    // Mapping: UI (Indo) -> DB (English)
+    final genderMap = {'Laki-laki': 'Male', 'Perempuan': 'Female'};
+    final regionMap = {
+      'Afrika': 'Africa',
+      'Asia': 'Asia',
+      'Eropa': 'Europe',
+      'Timur Tengah': 'Middle East',
+      'Amerika Utara': 'North America',
+      'Amerika Selatan': 'South America',
+    };
+    final eduMap = {
+      'SMA/SMK/Sederajat': 'High School',
+      'Sarjana': 'Bachelor',
+      'Magister': 'Master',
+      'Doktor': 'PhD',
+    };
+    final incomeLevelMap = {
+      'Rendah': 'Low',
+      'Menengah Bawah': 'Lower-Mid',
+      'Menengah Atas': 'Upper-Mid',
+      'Tinggi': 'High',
+    };
+    final roleMap = {
+      'Pelajar/Mahasiswa': 'Student',
+      'Karyawan Penuh waktu': 'Full-time',
+      'Karyawan Paruh waktu': 'Part-time',
+      'Pengurus rumah tangga': 'Caregiver',
+      'Tidak bekerja/sedang mencari kerja': 'Unemployed',
+    };
+
+    final mappedGender = genderMap[_gender] ?? 'Male';
+    final mappedRegion = regionMap[_region] ?? 'Asia';
+    final mappedEdu = eduMap[_pendidikan] ?? 'Bachelor';
+    final mappedIncome = incomeLevelMap[_incomeLevel] ?? 'Low';
+    final mappedRole = roleMap[_dailyRole] ?? 'Student';
 
     bool success = false;
     if (_useMockRegister) {
@@ -305,10 +332,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           .mockRegister(
             name: nama,
             email: email,
-            age: _ageFromBirthdate,
-            gender: _gender,
-            educationLevel: _pendidikan,
-            region: _region,
+            gender: mappedGender,
+            educationLevel: mappedEdu,
+            region: mappedRegion,
+            dateOfBirth: _tglLahir,
+            dailyRole: mappedRole,
+            incomeLevel: mappedIncome,
           );
     } else {
       success = await ref
@@ -318,10 +347,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             email: email,
             password: password,
             passwordConfirmation: konfirmasi,
-            age: _ageFromBirthdate,
-            gender: _gender,
-            educationLevel: _pendidikan,
-            region: _region,
+            gender: mappedGender,
+            educationLevel: mappedEdu,
+            region: mappedRegion,
+            dateOfBirth: _tglLahir,
+            dailyRole: mappedRole,
+            incomeLevel: mappedIncome,
           );
     }
 
@@ -551,7 +582,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ),
               const SizedBox(height: 4),
               const Text(
-                'Hanya akun Google yang terdaftar\nyang bisa melakukan registrasi',
+                'Opsional — verifikasi dengan Google\natau isi email secara manual di bawah',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
@@ -619,44 +650,45 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
           ),
-        // Submitted but not verified
-        if (_submitted && !_googleVerified && _googleError == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.error_outline_rounded,
-                  color: AppColors.red,
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'Email harus diverifikasi dengan Google',
-                  style: TextStyle(
-                    color: AppColors.red,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
 
   // ── Informasi Akun ─────────────────────────────────────────────────────
 
+  void _onManualEmailChanged(String val) {
+    setState(() {
+      if (_submitted) _emailError = _validateEmail(val.trim());
+    });
+    ref.read(authProvider.notifier).clearError();
+  }
+
+  bool get _manualEmailValid =>
+      _emailRegex.hasMatch(_manualEmailController.text.trim());
+
   Widget _buildInfoAkunSection() {
     return Column(
       children: [
-        // ── Google Verification Button ──────────────────────────────────
+        // ── Google Verification Button (optional) ───────────────────────
         _buildGoogleVerifySection(),
         const SizedBox(height: 16),
+        // ── Manual email field (shown when Google is not verified) ──────
+        if (!_googleVerified) ...[
+          AuthTextField(
+            label: 'Email',
+            hint: 'nama@email.com',
+            prefixIcon: Icons.mail_outline_rounded,
+            controller: _manualEmailController,
+            keyboardType: TextInputType.emailAddress,
+            isValid: _manualEmailValid,
+            errorText: _emailError,
+            onChanged: _onManualEmailChanged,
+          ),
+          const SizedBox(height: 16),
+        ],
         AuthTextField(
           label: 'Nama Lengkap',
-          hint: _googleVerified ? '' : 'Verifikasi Google dulu',
+          hint: 'Masukkan nama lengkap',
           prefixIcon: Icons.person_outline_rounded,
           controller: _namaController,
           isValid: _namaValid,
@@ -731,7 +763,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     child: child!,
                   ),
                 );
-                if (picked != null) setState(() => _tglLahir = picked);
+                if (picked != null) {
+                  setState(() {
+                    _tglLahir = picked;
+                    _tglLahirError = null;
+                  });
+                }
               },
               child: Container(
                 width: double.infinity,
@@ -743,10 +780,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   color: AppColors.bgWhite,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _tglLahir != null
-                        ? AppColors.teal
-                        : Colors.grey.shade200,
-                    width: _tglLahir != null ? 1.5 : 1,
+                    color: _tglLahirError != null
+                        ? AppColors.red
+                        : (_tglLahir != null
+                              ? AppColors.teal
+                              : Colors.grey.shade200),
+                    width: (_tglLahir != null || _tglLahirError != null)
+                        ? 1.5
+                        : 1,
                   ),
                 ),
                 child: Row(
@@ -793,6 +834,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 ),
               ),
             ),
+            if (_tglLahirError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 4),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: AppColors.red,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _tglLahirError!,
+                      style: const TextStyle(
+                        color: AppColors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -824,9 +887,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         ),
         const SizedBox(height: 16),
 
+        // Income Level ← BARU
+        AuthDropdownField(
+          label: 'Tingkat Pendapatan',
+          value: _incomeLevel,
+          items: _incomeOptions,
+          onChanged: (v) => setState(() => _incomeLevel = v ?? _incomeLevel),
+        ),
+        const SizedBox(height: 16),
+
         // Region
         AuthDropdownField(
-          label: 'Region',
+          label: 'Wilayah/Tempat Tinggal',
           value: _region,
           items: _regionOptions,
           onChanged: (v) => setState(() => _region = v ?? _region),

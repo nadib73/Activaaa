@@ -1,42 +1,57 @@
 /// Model untuk hasil prediksi ML.
-/// Sesuai MlResult.php + formatResult() PrediksiController.php
+/// Sesuai format baru PrediksiController.php — embedded ml_result + ai_analysis
 ///
-/// Catatan relasi dari MlResult.php:
-/// recommendations() → hasOne(Recommendation::class, 'result_id')
-/// Artinya recommendations adalah SATU object, bukan array langsung.
-/// Tapi di formatResult() Laravel sudah di-flatten:
-/// 'recommendations' => $result->recommendations
-/// Yang bisa berupa object Recommendation atau array teks.
+/// Response format:
+/// {
+///   "id": "...",
+///   "ml_result": { "digital_dependence_score": 60, "category": "sedang", "confidence": 0.82 },
+///   "ai_analysis": { "penyebab": [...], "rekomendasi": [...], "summary": "...", "model": "...", "generated_at": "..." },
+///   "week_group": "2026-W17",
+///   "questionnaire": { ... },
+///   "created_at": "..."
+/// }
 class MlResultModel {
   final String id;
-  final String userId;
   final String questionnaireId;
-  final double focusScore;
-  final double productivityScore;
+
+  // ── Embedded ml_result ─────────────────────────────────────────────────────
   final double digitalDependenceScore;
-  final bool highRiskFlag;
-  final String riskLevel;
-  final List<String> recommendations;
+  final String category; // "rendah", "sedang", "tinggi"
+  final double confidence;
+
+  // ── Embedded ai_analysis ──────────────────────────────────────────────────
+  final List<String> penyebab;
+  final List<RecommendationItem> rekomendasi;
+  final String summary;
+  final String aiModel;
+
+  final String weekGroup;
   final DateTime createdAt;
 
   const MlResultModel({
     required this.id,
-    required this.userId,
     required this.questionnaireId,
-    required this.focusScore,
-    required this.productivityScore,
     required this.digitalDependenceScore,
-    required this.highRiskFlag,
-    required this.recommendations,
+    required this.category,
+    required this.confidence,
+    required this.penyebab,
+    required this.rekomendasi,
+    required this.summary,
+    required this.aiModel,
+    required this.weekGroup,
     required this.createdAt,
-    this.riskLevel = 'Rendah',
   });
 
   // ── From JSON ──────────────────────────────────────────────────────────────
   factory MlResultModel.fromJson(Map<String, dynamic> json) {
+    // Embedded ml_result
+    final mlResult = json['ml_result'] as Map<String, dynamic>? ?? {};
+
+    // Embedded ai_analysis
+    final aiAnalysis = json['ai_analysis'] as Map<String, dynamic>? ?? {};
+
+    // Questionnaire
     final q = json['questionnaire'] as Map<String, dynamic>?;
-    final userId =
-        q?['user_id']?.toString() ?? json['user_id']?.toString() ?? '';
     final qId =
         q?['_id']?.toString() ??
         q?['id']?.toString() ??
@@ -45,56 +60,45 @@ class MlResultModel {
 
     return MlResultModel(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      userId: userId,
       questionnaireId: qId,
-      focusScore: _toDouble(json['focus_score']),
-      productivityScore: _toDouble(json['productivity_score']),
-      digitalDependenceScore: _toDouble(json['digital_dependence_score']),
-      highRiskFlag: json['high_risk_flag'] as bool? ?? false,
-      riskLevel: json['risk_level']?.toString() ?? 'Rendah',
-      recommendations: _parseRecommendations(json['recommendations']),
+      digitalDependenceScore: _toDouble(mlResult['digital_dependence_score']),
+      category: mlResult['category']?.toString() ?? 'rendah',
+      confidence: _toDouble(mlResult['confidence']),
+      penyebab: _parseStringList(aiAnalysis['penyebab']),
+      rekomendasi: _parseRekomendasi(aiAnalysis['rekomendasi']),
+      summary: aiAnalysis['summary']?.toString() ?? '',
+      aiModel: aiAnalysis['model']?.toString() ?? '',
+      weekGroup: json['week_group']?.toString() ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }
 
-  // ── Parse recommendations ──────────────────────────────────────────────────
-  // MlResult.php → recommendations() hasOne Recommendation
-  // Bisa berupa:
-  // 1. List<String>            → langsung pakai
-  // 2. List<Map>               → ambil field 'recommendation_text' atau 'text'
-  // 3. Map (single object)     → ambil field 'recommendations' (array di dalam)
-  // 4. null                    → return []
-  static List<String> _parseRecommendations(dynamic raw) {
+  // ── Parse helpers ──────────────────────────────────────────────────────────
+
+  static List<String> _parseStringList(dynamic raw) {
     if (raw == null) return [];
-
-    // Kasus 3: Object Recommendation tunggal (hasOne)
-    if (raw is Map<String, dynamic>) {
-      final inner = raw['recommendations'];
-      if (inner is List) return _parseRecommendations(inner);
-      final text =
-          raw['recommendation_text']?.toString() ?? raw['text']?.toString();
-      return text != null && text.isNotEmpty ? [text] : [];
-    }
-
-    // Kasus 1 & 2: List
     if (raw is List) {
-      final result = <String>[];
-      for (final item in raw) {
-        if (item is String && item.isNotEmpty) {
-          result.add(item);
-        } else if (item is Map) {
-          final text =
-              item['recommendation_text']?.toString() ??
-              item['text']?.toString() ??
-              '';
-          if (text.isNotEmpty) result.add(text);
-        }
-      }
-      return result;
+      return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
     }
+    return [];
+  }
 
+  static List<RecommendationItem> _parseRekomendasi(dynamic raw) {
+    if (raw == null) return [];
+    if (raw is List) {
+      return raw.map((e) {
+        if (e is Map<String, dynamic>) {
+          return RecommendationItem(
+            tag: e['tag']?.toString() ?? '',
+            isi: e['isi']?.toString() ?? '',
+          );
+        }
+        // Jika plain string
+        return RecommendationItem(tag: '', isi: e.toString());
+      }).where((r) => r.isi.isNotEmpty).toList();
+    }
     return [];
   }
 
@@ -107,22 +111,41 @@ class MlResultModel {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'user_id': userId,
     'questionnaire_id': questionnaireId,
-    'focus_score': focusScore,
-    'productivity_score': productivityScore,
-    'digital_dependence_score': digitalDependenceScore,
-    'high_risk_flag': highRiskFlag,
-    'risk_level': riskLevel,
-    'recommendations': recommendations,
+    'ml_result': {
+      'digital_dependence_score': digitalDependenceScore,
+      'category': category,
+      'confidence': confidence,
+    },
+    'ai_analysis': {
+      'penyebab': penyebab,
+      'rekomendasi': rekomendasi.map((r) => r.toJson()).toList(),
+      'summary': summary,
+      'model': aiModel,
+    },
+    'week_group': weekGroup,
     'created_at': createdAt.toIso8601String(),
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  int get focusInt => (focusScore * 100).round().clamp(0, 100);
-  int get productivityInt => productivityScore.round().clamp(0, 100);
   int get dependenceInt => digitalDependenceScore.round().clamp(0, 100);
+  int get confidenceInt => (confidence * 100).round().clamp(0, 100);
+
+  /// Label risiko: Rendah / Sedang / Tinggi
+  String get riskLevel {
+    switch (category.toLowerCase()) {
+      case 'tinggi':
+        return 'Tinggi';
+      case 'sedang':
+        return 'Sedang';
+      default:
+        return 'Rendah';
+    }
+  }
+
+  /// Daftar teks rekomendasi (untuk backward compat)
+  List<String> get recommendations => rekomendasi.map((r) => r.isi).toList();
 
   String get dayStr => createdAt.day.toString().padLeft(2, '0');
   String get monthStr {
@@ -148,5 +171,22 @@ class MlResultModel {
 
   @override
   String toString() =>
-      'MlResult(focus: $focusScore, prod: $productivityScore, dep: $digitalDependenceScore, risk: $riskLevel)';
+      'MlResult(dep: $digitalDependenceScore, category: $category, confidence: $confidence)';
+}
+
+/// ── RecommendationItem ──────────────────────────────────────────────────────
+class RecommendationItem {
+  final String tag;
+  final String isi;
+
+  const RecommendationItem({required this.tag, required this.isi});
+
+  factory RecommendationItem.fromJson(Map<String, dynamic> json) {
+    return RecommendationItem(
+      tag: json['tag']?.toString() ?? '',
+      isi: json['isi']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'tag': tag, 'isi': isi};
 }

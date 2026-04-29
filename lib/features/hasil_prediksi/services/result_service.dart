@@ -16,8 +16,8 @@ class ResultService {
 
   // ── Get Hasil Terbaru ──────────────────────────────────────────────────────
   /// GET /api/prediksi/latest
-  /// Response: { success, data: { id, focus_score, ..., risk_level,
-  ///             recommendations, questionnaire, created_at } }
+  /// Response: { success, data: { id, ml_result, ai_analysis,
+  ///             week_group, questionnaire, created_at } }
   Future<MlResultModel> getLatestResult() async {
     try {
       final response = await _client.get(ApiEndpoints.latestPrediksi);
@@ -55,18 +55,29 @@ class ResultService {
     await Future.delayed(const Duration(milliseconds: 800));
     return MlResultModel(
       id: 'mock_r1',
-      userId: 'mock_user',
       questionnaireId: 'mock_q1',
-      focusScore: 0.82,
-      productivityScore: 75,
       digitalDependenceScore: 60,
-      highRiskFlag: true,
-      riskLevel: 'Sedang',
-      recommendations: [
-        'Kurangi penggunaan media sosial 30 menit per hari',
-        'Tidur minimal 7 jam setiap malam',
-        'Lakukan olahraga ringan 3x seminggu',
+      category: 'sedang',
+      confidence: 0.82,
+      penyebab: ['screen_time_tinggi', 'tidur_kurang'],
+      rekomendasi: [
+        const RecommendationItem(
+          tag: 'social_media',
+          isi: 'Kurangi penggunaan media sosial 30 menit per hari',
+        ),
+        const RecommendationItem(
+          tag: 'sleep',
+          isi: 'Tidur minimal 7 jam setiap malam',
+        ),
+        const RecommendationItem(
+          tag: 'exercise',
+          isi: 'Lakukan olahraga ringan 3x seminggu',
+        ),
       ],
+      summary: 'Ketergantungan digital kamu pada level sedang. '
+          'Perhatikan waktu layar dan kualitas tidur.',
+      aiModel: 'mock',
+      weekGroup: '2026-W17',
       createdAt: DateTime.now(),
     );
   }
@@ -76,50 +87,74 @@ class ResultService {
     return [
       MlResultModel(
         id: 'r8',
-        userId: 'u1',
         questionnaireId: 'q8',
-        focusScore: 0.82,
-        productivityScore: 75,
         digitalDependenceScore: 60,
-        highRiskFlag: true,
-        riskLevel: 'Tinggi',
-        recommendations: ['Kurangi social media 30 menit per hari'],
+        category: 'sedang',
+        confidence: 0.82,
+        penyebab: ['screen_time_tinggi'],
+        rekomendasi: [
+          const RecommendationItem(
+            tag: 'social_media',
+            isi: 'Kurangi social media 30 menit per hari',
+          ),
+        ],
+        summary: 'Skor sedang — perlu perhatian pada media sosial.',
+        aiModel: 'mock',
+        weekGroup: '2026-W14',
         createdAt: DateTime(2025, 4, 7),
       ),
       MlResultModel(
         id: 'r7',
-        userId: 'u1',
         questionnaireId: 'q7',
-        focusScore: 0.78,
-        productivityScore: 70,
         digitalDependenceScore: 55,
-        highRiskFlag: false,
-        riskLevel: 'Sedang',
-        recommendations: ['Tingkatkan jam tidur'],
+        category: 'sedang',
+        confidence: 0.78,
+        penyebab: ['tidur_kurang'],
+        rekomendasi: [
+          const RecommendationItem(
+            tag: 'sleep',
+            isi: 'Tingkatkan jam tidur',
+          ),
+        ],
+        summary: 'Skor cukup — tidur perlu diperbaiki.',
+        aiModel: 'mock',
+        weekGroup: '2026-W13',
         createdAt: DateTime(2025, 4, 1),
       ),
       MlResultModel(
         id: 'r6',
-        userId: 'u1',
         questionnaireId: 'q6',
-        focusScore: 0.74,
-        productivityScore: 68,
         digitalDependenceScore: 58,
-        highRiskFlag: false,
-        riskLevel: 'Sedang',
-        recommendations: ['Olahraga 3x seminggu'],
+        category: 'sedang',
+        confidence: 0.80,
+        penyebab: ['kurang_olahraga'],
+        rekomendasi: [
+          const RecommendationItem(
+            tag: 'exercise',
+            isi: 'Olahraga 3x seminggu',
+          ),
+        ],
+        summary: 'Skor sedang — aktivitas fisik kurang.',
+        aiModel: 'mock',
+        weekGroup: '2026-W12',
         createdAt: DateTime(2025, 3, 22),
       ),
       MlResultModel(
         id: 'r5',
-        userId: 'u1',
         questionnaireId: 'q5',
-        focusScore: 0.70,
-        productivityScore: 65,
-        digitalDependenceScore: 50,
-        highRiskFlag: false,
-        riskLevel: 'Rendah',
-        recommendations: ['Kurangi notifikasi HP'],
+        digitalDependenceScore: 35,
+        category: 'rendah',
+        confidence: 0.85,
+        penyebab: [],
+        rekomendasi: [
+          const RecommendationItem(
+            tag: 'general',
+            isi: 'Pertahankan kebiasaan positif!',
+          ),
+        ],
+        summary: 'Skor rendah — gaya hidup digital sudah baik.',
+        aiModel: 'mock',
+        weekGroup: '2026-W11',
         createdAt: DateTime(2025, 3, 15),
       ),
     ];

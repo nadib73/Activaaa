@@ -7,7 +7,7 @@ import '../widgets/question_option_card.dart';
 import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
-import '../../auth/providers/auth_provider.dart';
+
 
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB
@@ -29,25 +29,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
     _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(questionnaireProvider.notifier).reset();
-      // Isi otomatis field dari data user yang sudah login
-      _prefillFromUser();
     });
-  }
-
-  void _prefillFromUser() {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-    ref
-        .read(questionnaireProvider.notifier)
-        .setFromUserData(
-          gender: user.gender,
-          region: user.region,
-          educationLevel: user.educationLevel,
-          incomeLevel: 'Low',
-          dailyRole: user.dailyRole, // ← pastikan ada di UserModel
-          deviceType: 'Android',
-          age: user.age, // ← TAMBAHKAN INI
-        );
   }
 
   @override
@@ -303,199 +285,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 1 — INFO DIRI
-// Q1: Usia (input angka)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _PageInfoDiri extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_PageInfoDiri> createState() => _PageInfoDiriState();
-}
-
-class _PageInfoDiriState extends ConsumerState<_PageInfoDiri> {
-  late final TextEditingController _ageController;
-
-  @override
-  void initState() {
-    super.initState();
-    final age = ref.read(questionnaireProvider).form.age;
-    _ageController = TextEditingController(text: age > 0 ? age.toString() : '');
-  }
-
-  @override
-  void dispose() {
-    _ageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final notifier = ref.read(questionnaireProvider.notifier);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Info field dari register
-          _buildRegisterInfoBanner(),
-          const SizedBox(height: 28),
-
-          // Q1 — Usia
-          _QuestionBlock(
-            number: 1,
-            question: 'Berapa usia kamu saat ini?',
-            hint: 'Masukkan usia antara 13 hingga 50 tahun',
-            child: _buildAgeInput(notifier),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRegisterInfoBanner() {
-    final form = ref.watch(questionnaireProvider).form;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.teal.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.teal.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.person_outline_rounded,
-                color: AppColors.teal,
-                size: 16,
-              ),
-              SizedBox(width: 6),
-              Text(
-                'Data dari akun kamu',
-                style: TextStyle(
-                  color: AppColors.teal,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _infoRow('Gender', form.gender),
-          _infoRow('Region', form.region),
-          _infoRow('Pendidikan', form.educationLevel),
-          const SizedBox(height: 4),
-          const Text(
-            'Data di atas diambil otomatis dari profil akun kamu.',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 11,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-            ),
-          ),
-          Text(
-            ': $value',
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAgeInput(QuestionnaireNotifier notifier) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _ageController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(2),
-          ],
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.center,
-          decoration: InputDecoration(
-            hintText: '20',
-            hintStyle: TextStyle(color: Colors.grey.shade300, fontSize: 24),
-            suffixText: 'tahun',
-            suffixStyle: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 16,
-            ),
-            filled: true,
-            fillColor: AppColors.bgLight,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.teal, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 18,
-            ),
-          ),
-          onChanged: (val) {
-            final age = int.tryParse(val) ?? 0;
-            if (age >= 13 && age <= 50) {
-              notifier.setAge(age);
-            }
-          },
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: Colors.grey.shade400,
-              size: 13,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Rentang usia yang valid: 13 – 50 tahun',
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 2 — PENGGUNAAN DIGITAL
+// HALAMAN 1 — PENGGUNAAN DIGITAL
 // Q8–Q12: Semua pilihan (option card)
 // ═══════════════════════════════════════════════════════════════════════════════
 

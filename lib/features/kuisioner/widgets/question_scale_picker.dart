@@ -43,14 +43,14 @@ class QuestionScalePicker extends StatelessWidget {
     final selectedInt = value.round();
     final total = max - min + 1;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(total, (i) {
-        final number = min + i;
-        final isSelected = number == selectedInt;
-        final color = _colorForValue(number);
+    final children = List.generate(total, (i) {
+      final number = min + i;
+      final isSelected = number == selectedInt;
+      final color = _colorForValue(number);
 
-        return GestureDetector(
+      return Padding(
+        padding: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
+        child: GestureDetector(
           onTap: () => onChanged(number),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -69,14 +69,20 @@ class QuestionScalePicker extends StatelessWidget {
                 '$number',
                 style: TextStyle(
                   color: isSelected ? Colors.white : color,
-                  fontSize: total > 10 ? 12 : 14,
+                  fontSize: total > 15 ? 10 : total > 10 ? 12 : 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
           ),
-        );
-      }),
+        ),
+      );
+    });
+
+    // Always use horizontal scroll to avoid overflow on narrow screens
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: children),
     );
   }
 

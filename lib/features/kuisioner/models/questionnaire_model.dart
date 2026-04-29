@@ -1,28 +1,18 @@
+import 'dart:io';
+
 /// Model untuk data kuesioner.
-/// Sesuai revisi dokumen kuesioner_ml_mapping.docx
+/// Sesuai revisi schema v2 — income_level/daily_role/age pindah ke User.
 ///
-/// Field dari Register (tidak ada di kuesioner lagi):
-/// gender, region, education_level, daily_role, device_type, income_level
-///
-/// Field baru di kuesioner:
-/// age (Q7) — diisi di kuesioner karena tidak ada di register
+/// Field di kuesioner:
+/// device_type (auto-detect dari Flutter), + semua field survey
 class QuestionnaireModel {
   final String? id;
   final String? userId;
 
-  // ── Dari Register — dikirim ke Laravel tapi tidak ditanyakan di kuesioner ──
-  final String incomeLevel; // Low / Lower-Mid / Upper-Mid / High
-  final String
-  dailyRole; // Student / Full-time / Part-time / Caregiver / Unemployed
-  final String deviceType; // Android / iPhone / Laptop / Tablet
-  final String gender; // Male / Female
-  final String region; // Africa / Asia / Europe / Middle East / ...
-  final String educationLevel; // High School / Bachelor / Master / PhD
+  // ── Device type — auto-detect dari Flutter ─────────────────────────────────
+  final String deviceType; // Android / iPhone
 
-  // ── Q7: Usia — input angka 13–50 ──────────────────────────────────────────
-  final int age;
-
-  // ── Q8–Q12: Pilihan → nilai ML (bukan slider lagi) ────────────────────────
+  // ── Q8–Q12: Pilihan → nilai ML ─────────────────────────────────────────────
   final double deviceHoursPerDay; // Q8:  1.5/3/5.5/8.5/12
   final int phoneUnlocksPerDay; // Q9:  10/35/75/150/250
   final int notificationsPerDay; // Q10: 30/100/300/700/1100
@@ -47,13 +37,7 @@ class QuestionnaireModel {
   const QuestionnaireModel({
     this.id,
     this.userId,
-    required this.incomeLevel,
-    required this.dailyRole,
     required this.deviceType,
-    required this.gender,
-    required this.region,
-    required this.educationLevel,
-    required this.age,
     required this.deviceHoursPerDay,
     required this.phoneUnlocksPerDay,
     required this.notificationsPerDay,
@@ -70,17 +54,10 @@ class QuestionnaireModel {
   });
 
   // ── To JSON ────────────────────────────────────────────────────────────────
-  // Semua field dikirim ke Laravel POST /api/surveys
-  // device_type tidak ada di fillable Questionnaire.php tapi
-  // dikirim agar Laravel bisa simpan jika nanti ditambahkan
+  // Dikirim ke Laravel POST /api/surveys
   Map<String, dynamic> toJson() {
     return {
-      'income_level': incomeLevel,
-      'daily_role': dailyRole,
-      'gender': gender,
-      'region': region,
-      'education_level': educationLevel,
-      'age': age,
+      'device_type': deviceType,
       'device_hours_per_day': deviceHoursPerDay,
       'phone_unlocks_per_day': phoneUnlocksPerDay,
       'notifications_per_day': notificationsPerDay,
@@ -101,13 +78,7 @@ class QuestionnaireModel {
     return QuestionnaireModel(
       id: json['_id'] ?? json['id'],
       userId: json['user_id'],
-      incomeLevel: json['income_level'] ?? 'Low',
-      dailyRole: json['daily_role'] ?? 'Student',
       deviceType: json['device_type'] ?? 'Android',
-      gender: json['gender'] ?? 'Male',
-      region: json['region'] ?? 'Asia',
-      educationLevel: json['education_level'] ?? 'High School',
-      age: _toInt(json['age']),
       deviceHoursPerDay: _toDouble(json['device_hours_per_day']),
       phoneUnlocksPerDay: _toInt(json['phone_unlocks_per_day']),
       notificationsPerDay: _toInt(json['notifications_per_day']),
@@ -141,14 +112,8 @@ class QuestionnaireModel {
 
   // ── Empty ──────────────────────────────────────────────────────────────────
   factory QuestionnaireModel.empty() {
-    return const QuestionnaireModel(
-      incomeLevel: 'Low',
-      dailyRole: 'Student',
-      deviceType: 'Android',
-      gender: 'Male',
-      region: 'Asia',
-      educationLevel: 'High School',
-      age: 20,
+    return QuestionnaireModel(
+      deviceType: Platform.isAndroid ? 'Android' : 'iPhone',
       deviceHoursPerDay: 5.5, // default pilihan "Sedang"
       phoneUnlocksPerDay: 75, // default pilihan "Cukup sering"
       notificationsPerDay: 100, // default pilihan "Sedikit"
@@ -166,13 +131,7 @@ class QuestionnaireModel {
 
   // ── CopyWith ───────────────────────────────────────────────────────────────
   QuestionnaireModel copyWith({
-    String? incomeLevel,
-    String? dailyRole,
     String? deviceType,
-    String? gender,
-    String? region,
-    String? educationLevel,
-    int? age,
     double? deviceHoursPerDay,
     int? phoneUnlocksPerDay,
     int? notificationsPerDay,
@@ -189,13 +148,7 @@ class QuestionnaireModel {
     return QuestionnaireModel(
       id: id,
       userId: userId,
-      incomeLevel: incomeLevel ?? this.incomeLevel,
-      dailyRole: dailyRole ?? this.dailyRole,
       deviceType: deviceType ?? this.deviceType,
-      gender: gender ?? this.gender,
-      region: region ?? this.region,
-      educationLevel: educationLevel ?? this.educationLevel,
-      age: age ?? this.age,
       deviceHoursPerDay: deviceHoursPerDay ?? this.deviceHoursPerDay,
       phoneUnlocksPerDay: phoneUnlocksPerDay ?? this.phoneUnlocksPerDay,
       notificationsPerDay: notificationsPerDay ?? this.notificationsPerDay,

@@ -72,7 +72,8 @@ class AuthService {
 
   // ── Register ───────────────────────────────────────────────────────────────
   /// POST /api/auth/register
-  /// Request: { name, email, password, password_confirmation, gender, age, region, education_level }
+  /// Request: { name, email, password, password_confirmation, gender,
+  ///            date_of_birth, region, education_level, daily_role, income_level }
   /// Response: {
   ///   success: true,
   ///   message: "Registrasi berhasil",
@@ -86,10 +87,12 @@ class AuthService {
     required String email,
     required String password,
     required String passwordConfirmation,
-    required int age,
     required String gender,
     required String educationLevel,
     required String region,
+    DateTime? dateOfBirth,
+    String? dailyRole,
+    String? incomeLevel,
   }) async {
     try {
       final response = await _client.post(
@@ -99,11 +102,12 @@ class AuthService {
           'email': email.trim().toLowerCase(),
           'password': password,
           'password_confirmation': passwordConfirmation,
-          'age': age,
-          // Laravel menerima lowercase sesuai validation 'in:male,female,other'
-          'gender': gender.toLowerCase(),
+          'gender': gender,
+          'date_of_birth': dateOfBirth?.toIso8601String().split('T').first,
           'education_level': educationLevel,
           'region': region,
+          'daily_role': dailyRole,
+          'income_level': incomeLevel,
         },
       );
 

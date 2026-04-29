@@ -15,10 +15,9 @@ class QuestionnaireState {
   final MlResultModel? result;
   final bool mlFailed;
 
-  // Halaman 1: Info Diri (Q7 usia)
-  // Halaman 2: Penggunaan Digital (Q8–Q12)
-  // Halaman 3: Aktivitas & Tidur (Q13–Q15)
-  // Halaman 4: Kondisi Mental (Q16–Q19)
+  // Halaman 1: Penggunaan Digital (Q8–Q12)
+  // Halaman 2: Aktivitas & Tidur (Q13–Q15)
+  // Halaman 3: Kondisi Mental (Q16–Q19)
   static const int totalPages = 3;
 
   const QuestionnaireState({
@@ -60,30 +59,6 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 
   QuestionnaireNotifier(this._service)
     : super(QuestionnaireState(form: QuestionnaireModel.empty()));
-
-  // ── Setter dari Register (diisi otomatis dari user data) ───────────────────
-  void setFromUserData({
-  required String gender,
-  required String region,
-  required String educationLevel,
-  required String incomeLevel,
-  required String dailyRole,
-  required String deviceType,
-  required int    age,          // ← TAMBAHKAN INI
-}) {
-  updateForm(state.form.copyWith(
-    gender        : gender,
-    region        : region,
-    educationLevel: educationLevel,
-    incomeLevel   : incomeLevel,
-    dailyRole     : dailyRole,
-    deviceType    : deviceType,
-    age           : age,        // ← TAMBAHKAN INI
-  ));
-}
-
-  // ── Setter Q7 ──────────────────────────────────────────────────────────────
-  void setAge(int v) => updateForm(state.form.copyWith(age: v));
 
   // ── Setter Q8–Q12 (pilihan → nilai ML) ────────────────────────────────────
   // Q8: Lama pakai perangkat → device_hours_per_day
@@ -191,24 +166,6 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
   // ── Mock Calculator ────────────────────────────────────────────────────────
 
   MlResultModel _calculateMockResult(QuestionnaireModel f) {
-    double focus = 0.85;
-    focus -= (f.notificationsPerDay / 1100) * 0.30;
-    focus -= (f.socialMediaMinutes / 400) * 0.15;
-    focus -= (f.stressLevel / 10) * 0.10;
-    focus += (f.happinessScore / 10) * 0.08;
-    focus += (f.sleepHours / 11) * 0.07;
-    focus += (f.studyMinutes / 400) * 0.10;
-    focus = focus.clamp(0.20, 1.0);
-
-    double prod = 70.0;
-    prod += (f.studyMinutes / 400) * 20;
-    prod += (f.physicalActivityDays / 7) * 10;
-    prod += ((f.sleepHours - 6) / 5) * 8;
-    prod -= (f.socialMediaMinutes / 400) * 15;
-    prod -= (f.stressLevel / 10) * 10;
-    prod -= (f.anxietyScore / 27) * 8;
-    prod = prod.clamp(20.0, 100.0);
-
     double dep = 30.0;
     dep += (f.deviceHoursPerDay / 12) * 30;
     dep += (f.phoneUnlocksPerDay / 250) * 25;
@@ -219,73 +176,83 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
     dep -= (f.happinessScore / 10) * 8;
     dep = dep.clamp(10.0, 100.0);
 
-    final highRisk = dep >= 65 || focus < 0.45;
+    String category;
+    if (dep >= 65) {
+      category = 'tinggi';
+    } else if (dep >= 40) {
+      category = 'sedang';
+    } else {
+      category = 'rendah';
+    }
 
-    String riskLevel;
-    if (highRisk || dep >= 75)
-      riskLevel = 'Tinggi';
-    else if (dep >= 50)
-      riskLevel = 'Sedang';
-    else
-      riskLevel = 'Rendah';
+    final confidence = 0.75 + (dep / 100) * 0.15;
 
-    return MlResultModel(
-      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-      userId: 'current_user',
-      questionnaireId: 'q_${DateTime.now().millisecondsSinceEpoch}',
-      focusScore: double.parse(focus.toStringAsFixed(2)),
-      productivityScore: double.parse(prod.toStringAsFixed(1)),
-      digitalDependenceScore: double.parse(dep.toStringAsFixed(1)),
-      highRiskFlag: highRisk,
-      riskLevel: riskLevel,
-      recommendations: _generateRecommendations(f),
-      createdAt: DateTime.now(),
-    );
-  }
+    final penyebab = <String>[];
+    final rekomendasi = <RecommendationItem>[];
 
-  List<String> _generateRecommendations(QuestionnaireModel f) {
-    final recs = <String>[];
     if (f.socialMediaMinutes > 120) {
-      recs.add(
-        'Kurangi media sosial — kamu menggunakannya '
-        '${(f.socialMediaMinutes / 60).toStringAsFixed(1)} jam/hari. Targetkan max 1 jam.',
-      );
+      penyebab.add('screen_time_tinggi');
+      rekomendasi.add(RecommendationItem(
+        tag: 'social_media',
+        isi: 'Kurangi media sosial — kamu menggunakannya '
+            '${(f.socialMediaMinutes / 60).toStringAsFixed(1)} jam/hari. Targetkan max 1 jam.',
+      ));
     }
     if (f.notificationsPerDay > 300) {
-      recs.add(
-        'Matikan notifikasi tidak penting. '
-        'Kamu menerima sekitar ${f.notificationsPerDay} notif/hari yang mengganggu fokus.',
-      );
+      penyebab.add('notifikasi_berlebihan');
+      rekomendasi.add(RecommendationItem(
+        tag: 'notifications',
+        isi: 'Matikan notifikasi tidak penting. '
+            'Kamu menerima sekitar ${f.notificationsPerDay} notif/hari.',
+      ));
     }
     if (f.sleepHours < 7) {
-      recs.add(
-        'Tidur minimal 7–8 jam/malam. '
-        'Saat ini ${f.sleepHours.toStringAsFixed(1)} jam kurang optimal untuk kesehatan.',
-      );
+      penyebab.add('tidur_kurang');
+      rekomendasi.add(RecommendationItem(
+        tag: 'sleep',
+        isi: 'Tidur minimal 7–8 jam/malam. '
+            'Saat ini ${f.sleepHours.toStringAsFixed(1)} jam kurang optimal.',
+      ));
     }
     if (f.physicalActivityDays < 3) {
-      recs.add(
-        'Olahraga minimal 3x/minggu. '
-        'Aktivitas fisik terbukti meningkatkan fokus dan produktivitas.',
-      );
-    }
-    if (f.phoneUnlocksPerDay > 75) {
-      recs.add(
-        'Kamu membuka HP ${f.phoneUnlocksPerDay}x/hari. '
-        'Coba gunakan Digital Wellbeing untuk membatasi frekuensi.',
-      );
+      penyebab.add('kurang_olahraga');
+      rekomendasi.add(RecommendationItem(
+        tag: 'exercise',
+        isi: 'Olahraga minimal 3x/minggu. '
+            'Aktivitas fisik terbukti meningkatkan fokus dan produktivitas.',
+      ));
     }
     if (f.stressLevel >= 7) {
-      recs.add(
-        'Stresmu cukup tinggi. Coba meditasi 10 menit/hari atau teknik deep breathing.',
-      );
+      penyebab.add('stress_tinggi');
+      rekomendasi.add(RecommendationItem(
+        tag: 'stress',
+        isi: 'Stresmu cukup tinggi. Coba meditasi 10 menit/hari atau teknik deep breathing.',
+      ));
     }
-    if (recs.isEmpty) {
-      recs.add(
-        'Gaya hidup digitalmu sudah cukup baik! Pertahankan kebiasaan positif ini.',
-      );
+    if (rekomendasi.isEmpty) {
+      rekomendasi.add(const RecommendationItem(
+        tag: 'general',
+        isi: 'Gaya hidup digitalmu sudah cukup baik! Pertahankan kebiasaan positif ini.',
+      ));
     }
-    return recs.take(4).toList();
+
+    final now = DateTime.now();
+    final weekNum = ((now.difference(DateTime(now.year, 1, 1)).inDays) / 7).ceil();
+    final weekGroup = '${now.year}-W${weekNum.toString().padLeft(2, '0')}';
+
+    return MlResultModel(
+      id: 'local_${now.millisecondsSinceEpoch}',
+      questionnaireId: 'q_${now.millisecondsSinceEpoch}',
+      digitalDependenceScore: double.parse(dep.toStringAsFixed(1)),
+      category: category,
+      confidence: double.parse(confidence.toStringAsFixed(2)),
+      penyebab: penyebab,
+      rekomendasi: rekomendasi.take(4).toList(),
+      summary: 'Skor ketergantungan digital kamu: ${dep.toStringAsFixed(0)} ($category).',
+      aiModel: 'mock',
+      weekGroup: weekGroup,
+      createdAt: now,
+    );
   }
 
   void reset() => state = QuestionnaireState(form: QuestionnaireModel.empty());

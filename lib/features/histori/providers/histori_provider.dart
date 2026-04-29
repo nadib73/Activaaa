@@ -115,19 +115,20 @@ final historiProvider = StateNotifierProvider<HistoriNotifier, HistoriState>((
 });
 
 /// Shortcut — cek apakah ada perkembangan positif (untuk banner)
+/// Untuk dependensi: skor turun = positif (membaik)
 final hasPerkembanganProvider = Provider<bool>((ref) {
   final items = ref.watch(historiProvider).items;
   if (items.length < 2) return false;
-  // Bandingkan focus score 2 data terbaru
-  return items[0].focusScore > items[1].focusScore;
+  // Bandingkan dependence score 2 data terbaru — turun = membaik
+  return items[0].digitalDependenceScore < items[1].digitalDependenceScore;
 });
 
-/// Shortcut — persentase perubahan focus score terbaru vs sebelumnya
-final focusChangeProvider = Provider<double>((ref) {
+/// Shortcut — persentase perubahan dependence score terbaru vs sebelumnya
+final dependenceChangeProvider = Provider<double>((ref) {
   final items = ref.watch(historiProvider).items;
   if (items.length < 2) return 0.0;
-  final latest = items[0].focusScore;
-  final prev = items[1].focusScore;
+  final latest = items[0].digitalDependenceScore;
+  final prev = items[1].digitalDependenceScore;
   if (prev == 0) return 0.0;
   return ((latest - prev) / prev) * 100;
 });
