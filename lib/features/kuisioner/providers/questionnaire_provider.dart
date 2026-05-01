@@ -1,3 +1,5 @@
+//lib/features/kuisoner/providers/questionnaire_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../hasil_prediksi/models/ml_result_model.dart';
 import '../models/questionnaire_model.dart';
@@ -15,9 +17,9 @@ class QuestionnaireState {
   final MlResultModel? result;
   final bool mlFailed;
 
-  // Halaman 1: Penggunaan Digital (Q8–Q12)
-  // Halaman 2: Aktivitas & Tidur (Q13–Q15)
-  // Halaman 3: Kondisi Mental (Q16–Q19)
+  // Halaman 1: Penggunaan Digital (Q1–Q5)
+  // Halaman 2: Aktivitas & Tidur (Q6–Q8)
+  // Halaman 3: Kondisi Mental (Q9–Q12)
   static const int totalPages = 3;
 
   const QuestionnaireState({
@@ -60,44 +62,44 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
   QuestionnaireNotifier(this._service)
     : super(QuestionnaireState(form: QuestionnaireModel.empty()));
 
-  // ── Setter Q8–Q12 (pilihan → nilai ML) ────────────────────────────────────
-  // Q8: Lama pakai perangkat → device_hours_per_day
+  // ── Setter Q1–Q5 (pilihan → nilai ML) ────────────────────────────────────
+  // Q1: Lama pakai perangkat → device_hours_per_day
   // Pilihan: Sangat sedikit=1.5, Sedikit=3, Sedang=5.5, Lama=8.5, Sangat lama=12
   void setDeviceHours(double v) =>
       updateForm(state.form.copyWith(deviceHoursPerDay: v));
 
-  // Q9: Buka HP per hari → phone_unlocks_per_day
+  // Q2: Buka HP per hari → phone_unlocks_per_day
   // Pilihan: Jarang=10, Kadang=35, Cukup sering=75, Sering=150, Sangat sering=250
   void setPhoneUnlocks(int v) =>
       updateForm(state.form.copyWith(phoneUnlocksPerDay: v));
 
-  // Q10: Notifikasi per hari → notifications_per_day
+  // Q3: Notifikasi per hari → notifications_per_day
   // Pilihan: Hampir tidak ada=30, Sedikit=100, Lumayan=300, Banyak=700, Sangat banyak=1100
   void setNotifications(int v) =>
       updateForm(state.form.copyWith(notificationsPerDay: v));
 
-  // Q11: Durasi sosmed → social_media_minutes
+  // Q4: Durasi sosmed → social_media_minutes
   // Pilihan: Tidak pakai=0, <1jam=30, 1-3jam=120, 3-5jam=240, >5jam=400
   void setSocialMediaMinutes(int v) =>
       updateForm(state.form.copyWith(socialMediaMinutes: v));
 
-  // Q12: Produktif belajar/kerja → study_minutes
+  // Q5: Produktif belajar/kerja → study_minutes
   // Pilihan: Hampir tidak ada=10, Sedikit=60, Cukup=150, Produktif=300, Sangat produktif=400
   void setStudyMinutes(int v) =>
       updateForm(state.form.copyWith(studyMinutes: v));
 
-  // ── Setter Q13–Q14 (slider) ────────────────────────────────────────────────
+  // ── Setter Q6–Q7 (slider) ────────────────────────────────────────────────
   void setPhysicalActivityDays(int v) =>
       updateForm(state.form.copyWith(physicalActivityDays: v));
   void setSleepHours(double v) =>
       updateForm(state.form.copyWith(sleepHours: v));
 
-  // ── Setter Q15 (pilihan → nilai ML) ───────────────────────────────────────
+  // ── Setter Q8 (pilihan → nilai ML) ───────────────────────────────────────
   // Pilihan: Sangat buruk=1, Buruk=2, Cukup=3, Baik=4, Sangat baik=5
   void setSleepQuality(double v) =>
       updateForm(state.form.copyWith(sleepQuality: v));
 
-  // ── Setter Q16–Q19 (skala) ────────────────────────────────────────────────
+  // ── Setter Q9–Q12 (skala) ────────────────────────────────────────────────
   void setAnxietyScore(double v) =>
       updateForm(state.form.copyWith(anxietyScore: v));
   void setDepressionScore(double v) =>
@@ -253,6 +255,37 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
       weekGroup: weekGroup,
       createdAt: now,
     );
+  }
+
+  // ── Fetch Latest ────────────────────────────────────────────────────────────
+  Future<MlResultModel?> fetchLatestResult() async {
+    state = state.copyWith(status: QuestionnaireStatus.loading, errorMessage: null);
+    try {
+      final data = await _service.getLatest();
+      if (data == null) {
+        state = state.copyWith(status: QuestionnaireStatus.initial);
+        return null;
+      }
+
+      // Backend biasanya mengirimkan { questionnaire: {...}, ml_result: {...} }
+      // atau langsung MlResult model. Kita coba parse ml_result nya.
+      final mlJson = data['ml_result'] as Map<String, dynamic>?;
+      if (mlJson != null) {
+        // Inject data questionnaire jika ada
+        if (data['questionnaire'] != null && mlJson['questionnaire'] == null) {
+          mlJson['questionnaire'] = data['questionnaire'];
+        }
+        final result = MlResultModel.fromJson(mlJson);
+        state = state.copyWith(status: QuestionnaireStatus.success, result: result);
+        return result;
+      }
+      
+      state = state.copyWith(status: QuestionnaireStatus.initial);
+      return null;
+    } catch (e) {
+      state = state.copyWith(status: QuestionnaireStatus.error, errorMessage: e.toString());
+      return null;
+    }
   }
 
   void reset() => state = QuestionnaireState(form: QuestionnaireModel.empty());

@@ -1,5 +1,6 @@
+//lib/features/kuisioner/screens/kuesioner_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/questionnaire_provider.dart';
@@ -8,10 +9,9 @@ import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
 
-
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB
-const bool _useMockSurvey = true;
+const bool _useMockSurvey = false;
 
 class KuesionerScreen extends ConsumerStatefulWidget {
   const KuesionerScreen({super.key});
@@ -22,11 +22,14 @@ class KuesionerScreen extends ConsumerStatefulWidget {
 
 class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
   late final PageController _pageController;
+  bool _showSelection = true;
+  bool _isFetchingLatest = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    // Reset state saat masuk (untuk ancang-ancang kuesioner baru)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(questionnaireProvider.notifier).reset();
     });
@@ -40,8 +43,57 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
+  void _startNew() {
+    setState(() => _showSelection = false);
+    ref.read(questionnaireProvider.notifier).reset();
+  }
+
+  Future<void> _viewLatest() async {
+    setState(() => _isFetchingLatest = true);
+    final result = await ref.read(questionnaireProvider.notifier).fetchLatestResult();
+    setState(() => _isFetchingLatest = false);
+
+    if (result != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada data kuesioner sebelumnya'),
+          backgroundColor: AppColors.amber,
+        ),
+      );
+    }
+  }
+
   void _nextPage() {
-    if (ref.read(questionnaireProvider).isLastPage) {
+    final state = ref.read(questionnaireProvider);
+    bool isPageValid = false;
+
+    // Validasi per halaman
+    if (state.currentPage == 0) {
+      isPageValid = state.form.isPage1Complete;
+    } else if (state.currentPage == 1) {
+      isPageValid = state.form.isPage2Complete;
+    } else {
+      isPageValid = state.form.isPage3Complete;
+    }
+
+    if (!isPageValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mohon isi semua pertanyaan di halaman ini sebelum lanjut.'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (state.isLastPage) {
       _submit();
     } else {
       ref.read(questionnaireProvider.notifier).nextPage();
@@ -54,6 +106,11 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
   void _prevPage() {
     final state = ref.read(questionnaireProvider);
+    if (_showSelection) {
+      Navigator.pop(context);
+      return;
+    }
+
     if (state.currentPage > 0) {
       ref.read(questionnaireProvider.notifier).prevPage();
       _pageController.previousPage(
@@ -61,11 +118,22 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pop(context);
+      setState(() => _showSelection = true);
     }
   }
 
   Future<void> _submit() async {
+    final state = ref.read(questionnaireProvider);
+    if (!state.form.isComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ada pertanyaan yang terlewat. Mohon periksa kembali.'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
     final success = await ref
         .read(questionnaireProvider.notifier)
         .submit(useMock: _useMockSurvey);
@@ -77,12 +145,11 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
         MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
       );
     } else if (!success && mounted) {
-      final error = ref.read(questionnaireProvider).errorMessage ?? 'Gagal memproses data';
+      final error =
+          ref.read(questionnaireProvider).errorMessage ??
+          'Gagal memproses data';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     }
   }
@@ -91,6 +158,8 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showSelection) return _buildSelectionView();
+
     final state = ref.watch(questionnaireProvider);
 
     return Scaffold(
@@ -117,6 +186,142 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
     );
   }
 
+  // ── Selection View ─────────────────────────────────────────────────────────
+
+  Widget _buildSelectionView() {
+    return Scaffold(
+      backgroundColor: AppColors.bgWhite,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 32),
+              _backButton(),
+              const SizedBox(height: 32),
+              const Text(
+                'Kuesioner Analisis',
+                style: TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Pilih opsi di bawah untuk melanjutkan pemantauan aktivitas digitalmu.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 15),
+              ),
+              const SizedBox(height: 48),
+              _selectionCard(
+                title: 'Mulai Kuesioner Baru',
+                desc: 'Lakukan analisis kondisi terbaru kamu hari ini.',
+                icon: Icons.assignment_outlined,
+                color: AppColors.teal,
+                onTap: _startNew,
+              ),
+              const SizedBox(height: 20),
+              _selectionCard(
+                title: 'Lihat Hasil Terakhir',
+                desc: 'Cek rangkuman dan rekomendasi kuesioner sebelumnya.',
+                icon: Icons.history_outlined,
+                color: AppColors.blue,
+                onTap: _viewLatest,
+                isLoading: _isFetchingLatest,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _backButton() {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.bgLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
+      ),
+    );
+  }
+
+  Widget _selectionCard({
+    required String title,
+    required String desc,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    bool isLoading = false,
+  }) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.bgWhite,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.lightBorder),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    desc,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+              )
+            else
+              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Header ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(QuestionnaireState state) {
@@ -126,7 +331,6 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
       'Kondisi Mental',
     ];
     const subtitles = [
-      'Ceritakan sedikit tentang dirimu',
       'Seberapa sering kamu pakai gadget?',
       'Bagaimana keseharianmu?',
       'Bagaimana kondisi mentalmu belakangan ini?',
@@ -294,7 +498,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HALAMAN 1 — PENGGUNAAN DIGITAL
-// Q8–Q12: Semua pilihan (option card)
+// Q1–Q5: Semua pilihan (option card)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _PagePenggunaanDigital extends ConsumerWidget {
@@ -524,7 +728,7 @@ class _PagePenggunaanDigital extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 3 — AKTIVITAS & TIDUR
+// HALAMAN 2 — AKTIVITAS & TIDUR
 // Q6: slider hari olahraga
 // Q7: slider jam tidur
 // Q8: pilihan kualitas tidur
@@ -676,7 +880,7 @@ class _PageAktivitasTidur extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HALAMAN 4 — KONDISI MENTAL
+// HALAMAN 3 — KONDISI MENTAL
 // Q9: Anxiety 0–27
 // Q10: Depresi  0–27
 // Q11: Stres    1–10
@@ -699,7 +903,7 @@ class _PageKondisiMental extends ConsumerWidget {
           // Q9 — Anxiety (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
             number: 9,
-            question: 'Seberapa sering kamu merasa cemas atau gelisah?',
+            question: 'Seberapa sering kamu merasa cemas atau gelisah hari ini?',
             hint: '0 = tidak pernah cemas, 27 = sangat sering cemas',
             child: QuestionScalePicker(
               value: form.anxietyScore,
@@ -717,7 +921,7 @@ class _PageKondisiMental extends ConsumerWidget {
           _QuestionBlock(
             number: 10,
             question:
-                'Seberapa sering kamu merasa sedih atau tidak bersemangat?',
+                'Seberapa sering kamu merasa sedih atau tidak bersemangat hari ini?',
             hint: '0 = tidak pernah, 27 = hampir setiap saat',
             child: QuestionScalePicker(
               value: form.depressionScore,
@@ -734,7 +938,7 @@ class _PageKondisiMental extends ConsumerWidget {
           // Q11 — Stres (1–10, invertColor: tinggi = merah)
           _QuestionBlock(
             number: 11,
-            question: 'Seberapa tinggi tingkat stres kamu saat ini?',
+            question: 'Seberapa tinggi tingkat stres kamu hari ini?',
             hint: '1 = sangat santai, 10 = sangat stres',
             child: QuestionScalePicker(
               value: form.stressLevel,
@@ -751,7 +955,7 @@ class _PageKondisiMental extends ConsumerWidget {
           // Q12 — Happiness (0–10, normal: tinggi = hijau)
           _QuestionBlock(
             number: 12,
-            question: 'Seberapa bahagia kamu belakangan ini?',
+            question: 'Seberapa bahagia kamu hari ini?',
             hint: '0 = sangat tidak bahagia, 10 = sangat bahagia',
             child: QuestionScalePicker(
               value: form.happinessScore,

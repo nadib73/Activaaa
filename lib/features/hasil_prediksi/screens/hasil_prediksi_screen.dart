@@ -1,3 +1,5 @@
+//lib/features/hasil_prediksi/screens/hasil_prediksi_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -8,6 +10,8 @@ import '../widgets/score_circle.dart';
 import '../widgets/trend_bar_chart.dart';
 import '../../histori/screens/histori_screen.dart';
 import '../../../shared/widgets/bottom_nav.dart';
+import '../../kuisioner/screens/kuesioner_screen.dart';
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
@@ -76,15 +80,24 @@ class HasilPrediksiScreen extends ConsumerWidget {
         Navigator.popUntil(context, (route) => route.isFirst);
         break;
       case 1:
-        // Sudah di flow kuesioner, tidak perlu pindah jika tidak perlu
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const KuesionerScreen()),
+        );
         break;
       case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LaporanPerkembanganScreen()),
+        );
+        break;
+      case 3:
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const GrafikScreen()),
         );
         break;
-      case 3:
+      case 4:
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProfilScreen()),

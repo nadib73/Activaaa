@@ -91,7 +91,8 @@ class BottomNav extends StatelessWidget {
 
 const _navItems = [
   (Icons.home_rounded, 'Beranda'),
-  (Icons.list_alt_rounded, 'Kuesioner'),
+  (Icons.assignment_outlined, 'Kuesioner'),
+  (Icons.analytics_outlined, 'Laporan'),
   (Icons.show_chart_rounded, 'Grafik'),
   (Icons.person_rounded, 'Profil'),
 ];

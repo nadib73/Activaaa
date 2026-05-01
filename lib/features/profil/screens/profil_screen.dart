@@ -8,9 +8,8 @@ import '../../auth/screens/login_screen.dart';
 import '../widgets/stats_row.dart';
 import '../widgets/setting_item.dart';
 import '../widgets/setting_item_toggle.dart';
-import '../../histori/screens/histori_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
-
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
 
 class ProfilScreen extends ConsumerStatefulWidget {
@@ -26,20 +25,26 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   void _onNavTap(int index) {
-    if (index == 3) return; // Sudah di profil
+    if (index == 4) return; // Sudah di profil
 
     switch (index) {
       case 0:
         Navigator.popUntil(context, (route) => route.isFirst);
         break;
       case 1:
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const KuesionerScreen()),
         );
         break;
       case 2:
-        Navigator.push(
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LaporanPerkembanganScreen()),
+        );
+        break;
+      case 3:
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const GrafikScreen()),
         );
@@ -199,7 +204,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
               ),
             ),
             BottomNav(
-              currentIndex: 3,
+              currentIndex: 4,
               navTheme: NavTheme.light,
               onTap: _onNavTap,
             ),
