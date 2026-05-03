@@ -33,7 +33,7 @@ extension AnalisisDataConverter on AnalisisData {
       month: mlResult.monthStr,
       dep: mlResult.dependenceInt,
       category: mlResult.category,
-      confidence: mlResult.confidence,
+      confidence: mlResult.confidence.confidenceFinalPct,
       note: mlResult.riskLevel,
       noteColor: isHighRisk ? AppColors.red : AppColors.teal,
     );

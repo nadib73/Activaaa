@@ -33,7 +33,9 @@ class ApiClient {
 
   // ── GET ────────────────────────────────────────────────────────────────────
   Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
-    return _dio.get(path, queryParameters: queryParams);
+    final params = queryParams ?? {};
+    params['_t'] = DateTime.now().millisecondsSinceEpoch; // Cache buster
+    return _dio.get(path, queryParameters: params);
   }
 
   // ── POST ───────────────────────────────────────────────────────────────────

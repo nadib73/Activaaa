@@ -20,6 +20,7 @@ class RecommendationItem {
 
 class MlResultModel {
   final String id;
+  final String userId;
   final String questionnaireId;
   final double digitalDependenceScore;
   final String category;
@@ -33,6 +34,7 @@ class MlResultModel {
 
   const MlResultModel({
     required this.id,
+    required this.userId,
     required this.questionnaireId,
     required this.digitalDependenceScore,
     required this.category,
@@ -60,6 +62,23 @@ class MlResultModel {
     return '${d.day.toString().padLeft(2, '0')}/'
         '${d.month.toString().padLeft(2, '0')}/'
         '${d.year}';
+  }
+
+  String get dayStr => createdAt.day.toString().padLeft(2, '0');
+
+  String get monthStr {
+    const months = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
+      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
+    ];
+    return months[createdAt.month - 1];
+  }
+
+  String get riskLevel {
+    final cat = category.toLowerCase();
+    if (cat == 'tinggi' || cat == 'high') return 'Risiko Tinggi';
+    if (cat == 'sedang' || cat == 'moderate') return 'Perlu Perhatian';
+    return 'Hidup Sehat';
   }
 
   // ── fromJson ───────────────────────────────────────────────────────────────
@@ -141,6 +160,7 @@ class MlResultModel {
 
     return MlResultModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? json['userId']?.toString() ?? '',
       questionnaireId: qId,
       digitalDependenceScore: score,
       category: category,
@@ -165,6 +185,7 @@ class MlResultModel {
 
   Map<String, dynamic> toJson() => {
     '_id': id,
+    'user_id': userId,
     'questionnaire_id': questionnaireId,
     'ml_result': {
       'digital_dependence_score': digitalDependenceScore,
