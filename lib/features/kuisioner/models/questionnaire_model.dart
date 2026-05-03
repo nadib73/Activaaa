@@ -1,4 +1,6 @@
-import 'dart:io';
+//lib/features/kuisioner/models/questionnaire_model.dart
+
+import 'package:flutter/foundation.dart';
 
 /// Model untuk data kuesioner.
 /// Sesuai revisi schema v2 — income_level/daily_role/age pindah ke User.
@@ -59,9 +61,9 @@ class QuestionnaireModel {
     return {
       'device_type': deviceType,
       'device_hours_per_day': deviceHoursPerDay,
-      'phone_unlocks_per_day': phoneUnlocksPerDay,
+      'phone_unlocks': phoneUnlocksPerDay,
       'notifications_per_day': notificationsPerDay,
-      'social_media_minutes': socialMediaMinutes,
+      'social_media_mins': socialMediaMinutes,
       'study_minutes': studyMinutes,
       'physical_activity_days': physicalActivityDays,
       'sleep_hours': sleepHours,
@@ -78,11 +80,11 @@ class QuestionnaireModel {
     return QuestionnaireModel(
       id: json['_id'] ?? json['id'],
       userId: json['user_id'],
-      deviceType: json['device_type'] ?? 'Android',
+      deviceType: json['device_type'] ?? 'Laptop',
       deviceHoursPerDay: _toDouble(json['device_hours_per_day']),
-      phoneUnlocksPerDay: _toInt(json['phone_unlocks_per_day']),
+      phoneUnlocksPerDay: _toInt(json['phone_unlocks']),
       notificationsPerDay: _toInt(json['notifications_per_day']),
-      socialMediaMinutes: _toInt(json['social_media_minutes']),
+      socialMediaMinutes: _toInt(json['social_media_mins']),
       studyMinutes: _toInt(json['study_minutes']),
       physicalActivityDays: _toInt(json['physical_activity_days']),
       sleepHours: _toDouble(json['sleep_hours']),
@@ -113,19 +115,23 @@ class QuestionnaireModel {
   // ── Empty ──────────────────────────────────────────────────────────────────
   factory QuestionnaireModel.empty() {
     return QuestionnaireModel(
-      deviceType: Platform.isAndroid ? 'Android' : 'iPhone',
-      deviceHoursPerDay: 5.5, // default pilihan "Sedang"
-      phoneUnlocksPerDay: 75, // default pilihan "Cukup sering"
-      notificationsPerDay: 100, // default pilihan "Sedikit"
-      socialMediaMinutes: 30, // default pilihan "<1 jam"
-      studyMinutes: 150, // default pilihan "Cukup"
-      physicalActivityDays: 3,
-      sleepHours: 7.0,
-      sleepQuality: 3.0, // default pilihan "Cukup"
-      anxietyScore: 5.0,
-      depressionScore: 5.0,
-      stressLevel: 5.0,
-      happinessScore: 5.0,
+      deviceType: kIsWeb
+          ? 'Web'
+          : defaultTargetPlatform == TargetPlatform.android
+              ? 'Android'
+              : 'iPhone',
+      deviceHoursPerDay: 0.0,
+      phoneUnlocksPerDay: 0,
+      notificationsPerDay: 0,
+      socialMediaMinutes: -1, // Agar tidak bentrok dengan pilihan "Tidak Pakai" (0)
+      studyMinutes: 0,
+      physicalActivityDays: 0,
+      sleepHours: 7.0, // Default tengah untuk slider
+      sleepQuality: 0.0,
+      anxietyScore: -1.0,
+      depressionScore: -1.0,
+      stressLevel: -1.0, 
+      happinessScore: -1.0, 
     );
   }
 
@@ -163,4 +169,22 @@ class QuestionnaireModel {
       happinessScore: happinessScore ?? this.happinessScore,
     );
   }
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  bool get isPage1Complete =>
+      deviceHoursPerDay > 0 &&
+      phoneUnlocksPerDay > 0 &&
+      notificationsPerDay > 0 &&
+      socialMediaMinutes >= 0 &&
+      studyMinutes > 0;
+
+  bool get isPage2Complete => sleepQuality > 0;
+
+  bool get isPage3Complete =>
+      anxietyScore >= 0 &&
+      depressionScore >= 0 &&
+      stressLevel >= 0 &&
+      happinessScore >= 0;
+
+  bool get isComplete => isPage1Complete && isPage2Complete && isPage3Complete;
 }

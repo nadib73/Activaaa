@@ -14,7 +14,7 @@ class HistoriState {
   const HistoriState({
     this.status = HistoriStatus.initial,
     this.items = const [],
-    this.errorMessage = null,
+    this.errorMessage,
   });
 
   bool get isLoading => status == HistoriStatus.loading;

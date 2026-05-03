@@ -8,8 +8,9 @@ import '../../auth/screens/login_screen.dart';
 import '../widgets/stats_row.dart';
 import '../widgets/setting_item.dart';
 import '../widgets/setting_item_toggle.dart';
-import '../../histori/screens/histori_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
+import '../../kuisioner/screens/kuesioner_screen.dart';
 
 class ProfilScreen extends ConsumerStatefulWidget {
   const ProfilScreen({super.key});
@@ -24,20 +25,30 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   void _onNavTap(int index) {
+    if (index == 4) return; // Sudah di profil
+
     switch (index) {
       case 0:
         Navigator.popUntil(context, (route) => route.isFirst);
         break;
       case 1:
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HistoriScreen()),
+          MaterialPageRoute(builder: (context) => const KuesionerScreen()),
         );
         break;
       case 2:
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const GrafikScreen()),
+          MaterialPageRoute(
+            builder: (context) => const LaporanPerkembanganScreen(),
+          ),
+        );
+        break;
+      case 3:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const GrafikScreen()),
         );
         break;
     }
@@ -108,8 +119,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       Navigator.pushAndRemoveUntil(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, animation, __) => const LoginScreen(),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, animation, _) => const LoginScreen(),
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
@@ -195,7 +206,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
               ),
             ),
             BottomNav(
-              currentIndex: 3,
+              currentIndex: 4,
               navTheme: NavTheme.light,
               onTap: _onNavTap,
             ),

@@ -7,6 +7,7 @@ import '../providers/dashboard_provider.dart';
 import '../widgets/score_card.dart';
 import '../widgets/focus_bar_chart.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 
@@ -73,10 +74,16 @@ class DashboardScreen extends ConsumerWidget {
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const GrafikScreen()),
+          MaterialPageRoute(builder: (_) => const LaporanPerkembanganScreen()),
         );
         break;
       case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GrafikScreen()),
+        );
+        break;
+      case 4:
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProfilScreen()),
