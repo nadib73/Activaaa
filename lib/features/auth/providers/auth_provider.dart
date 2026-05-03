@@ -13,8 +13,8 @@ class AuthState {
 
   const AuthState({
     this.status = AuthStatus.initial,
-    this.user = null,
-    this.errorMessage = null,
+    this.user,
+    this.errorMessage,
   });
 
   bool get isLoading => status == AuthStatus.loading;

@@ -16,8 +16,8 @@ class ForgotPasswordState {
     this.status = ForgotPasswordStatus.initial,
     this.email = '',
     this.otpVerified = false,
-    this.errorMessage = null,
-    this.successMessage = null,
+    this.errorMessage,
+    this.successMessage,
   });
 
   bool get isLoading => status == ForgotPasswordStatus.loading;

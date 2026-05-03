@@ -162,8 +162,7 @@ class AuthService {
       final data = response.data as Map<String, dynamic>;
 
       // Response: { success: true, data: { ...user } }
-      final userJson =
-          data['data'] as Map<String, dynamic>? ?? data as Map<String, dynamic>;
+      final userJson = data['data'] as Map<String, dynamic>? ?? data;
 
       return UserModel.fromJson(userJson);
     } on DioException catch (e) {
