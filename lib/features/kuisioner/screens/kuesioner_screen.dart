@@ -8,6 +8,7 @@ import '../widgets/question_option_card.dart';
 import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
+import '../../hasil_prediksi/providers/result_provider.dart';
 
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB
@@ -31,7 +32,7 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
     _pageController = PageController();
     // Reset state saat masuk (untuk ancang-ancang kuesioner baru)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(questionnaireProvider.notifier).reset();
+      ref.read(questionnaireProvider.notifier).reset(keepResult: true);
     });
   }
 
@@ -49,11 +50,24 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
   }
 
   Future<void> _viewLatest() async {
+    // Cek cache lokal di provider terlebih dahulu (agar instan)
+    final existingResult = ref.read(questionnaireProvider).result;
+    if (existingResult != null && !_isFetchingLatest) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: existingResult)),
+      );
+      return;
+    }
+
     setState(() => _isFetchingLatest = true);
     final result = await ref.read(questionnaireProvider.notifier).fetchLatestResult();
     setState(() => _isFetchingLatest = false);
 
     if (result != null && mounted) {
+      // Sync ke resultProvider juga
+      ref.read(resultProvider.notifier).setResult(result);
+      
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
@@ -140,7 +154,17 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
     if (success && mounted) {
       final result = ref.read(questionnaireProvider).result;
-      Navigator.pushReplacement(
+
+      // Sync ke resultProvider agar dashboard/grafik terupdate
+      if (result != null) {
+        ref.read(resultProvider.notifier).setResult(result);
+      }
+
+      // Reset form ke menu utama kuesioner, tapi simpan result untuk cache
+      ref.read(questionnaireProvider.notifier).reset(keepResult: true);
+      setState(() => _showSelection = true);
+
+      Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
       );

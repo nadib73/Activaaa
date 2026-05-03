@@ -7,7 +7,6 @@ import '../../kuisioner/providers/questionnaire_provider.dart';
 import '../models/ml_result_model.dart';
 import '../providers/result_provider.dart';
 import '../widgets/score_circle.dart';
-import '../widgets/trend_bar_chart.dart';
 import '../../histori/screens/histori_screen.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
@@ -44,19 +43,17 @@ class HasilPrediksiScreen extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Column(
                               children: [
-                                const SizedBox(height: 12),
-                                _buildScoreCircles(data),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
+                                _buildLargeScoreCircle(data),
+                                const SizedBox(height: 24),
                                 _buildRiskBadge(data),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 24),
+                                _buildConfidenceDetail(data),
+                                const SizedBox(height: 32),
                                 _buildRekomendasiCard(data),
-                                const SizedBox(height: 16),
-                                _buildScoreDetailCard(data),
-                                const SizedBox(height: 16),
-                                _buildTrendCard(),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 24),
                                 _buildHistoriButton(context),
-                                const SizedBox(height: 30),
+                                const SizedBox(height: 40),
                               ],
                             ),
                           ),
@@ -178,62 +175,121 @@ class HasilPrediksiScreen extends ConsumerWidget {
     );
   }
 
-  // ── Score Circles ──────────────────────────────────────────────────────────
+  // ── Score Components ───────────────────────────────────────────────────────
 
-  Widget _buildScoreCircles(MlResultModel data) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ScoreCircle(
-          score: data.dependenceInt.toString(),
-          label: 'Dependensi',
-          color: AppColors.red,
-          percent: data.digitalDependenceScore / 100,
-        ),
-        ScoreCircle(
-          score: '${data.confidenceInt}%',
-          label: 'Confidence',
-          color: AppColors.teal,
-          percent: data.confidence.asRatio, // ✅ fix: pakai .asRatio
-        ),
-      ],
+  Widget _buildLargeScoreCircle(MlResultModel data) {
+    return Center(
+      child: ScoreCircle(
+        score: data.dependenceInt.toString(),
+        label: 'Skor Dependensi Digital',
+        color: AppColors.red,
+        percent: (data.digitalDependenceScore / 100).clamp(0.0, 1.0),
+        size: 160,
+        fontSize: 48,
+      ),
     );
   }
 
-  // ── Risk Badge ─────────────────────────────────────────────────────────────
-
   Widget _buildRiskBadge(MlResultModel data) {
-    final isHighRisk = data.category.toLowerCase() == 'tinggi';
-    final color = isHighRisk ? AppColors.red : AppColors.teal;
-    final label = isHighRisk
-        ? 'Risiko Tinggi — Dependensi Digital'
-        : data.category.toLowerCase() == 'sedang'
-        ? 'Sedang — Perlu Perhatian'
-        : 'Rendah — Gaya Hidup Digital Sehat';
-    final icon = isHighRisk
+    final cat = data.category.toLowerCase();
+    final isHigh = cat == 'tinggi' || cat == 'high';
+    final isMedium = cat == 'sedang' || cat == 'moderate';
+    
+    final color = isHigh 
+        ? AppColors.red 
+        : (isMedium ? AppColors.amber : AppColors.teal);
+        
+    final label = isHigh
+        ? 'Tinggi — Risiko Ketergantungan'
+        : (isMedium ? 'Sedang — Perlu Perhatian' : 'Rendah — Pola Hidup Sehat');
+        
+    final icon = isHigh
         ? Icons.warning_amber_rounded
-        : Icons.check_circle_outline_rounded;
+        : (isMedium ? Icons.info_outline_rounded : Icons.check_circle_outline_rounded);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 8),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
           Text(
             label,
             style: TextStyle(
               color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfidenceDetail(MlResultModel data) {
+    final confidence = data.confidence.confidenceFinalPct;
+    const color = AppColors.teal;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Tingkat Kepercayaan Analisis (Confidence)',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${confidence.toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: confidence / 100,
+              minHeight: 10,
+              backgroundColor: color.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation(color),
+            ),
+          ),
+          if (data.confidence.label.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Status: ${data.confidence.label}',
+              style: TextStyle(
+                color: color.withValues(alpha: 0.7),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -244,10 +300,10 @@ class HasilPrediksiScreen extends ConsumerWidget {
   Widget _buildRekomendasiCard(MlResultModel data) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
@@ -255,19 +311,19 @@ class HasilPrediksiScreen extends ConsumerWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.star_rounded, color: AppColors.teal, size: 18),
-              SizedBox(width: 8),
+              Icon(Icons.auto_awesome_rounded, color: AppColors.teal, size: 20),
+              SizedBox(width: 10),
               Text(
-                'Rekomendasi Personal',
+                'Rekomendasi Untukmu',
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
           ...data.recommendations.map(_buildRekItem),
         ],
       ),
@@ -276,181 +332,30 @@ class HasilPrediksiScreen extends ConsumerWidget {
 
   Widget _buildRekItem(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 5),
-            width: 6,
-            height: 6,
+            margin: const EdgeInsets.only(top: 6),
+            width: 8,
+            height: 8,
             decoration: const BoxDecoration(
               color: AppColors.teal,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
-                height: 1.5,
+                height: 1.6,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ── Score Detail Card ──────────────────────────────────────────────────────
-
-  Widget _buildScoreDetailCard(MlResultModel data) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Detail Skor',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildScoreBar(
-            label: 'Dependensi Digital',
-            value: data.digitalDependenceScore,
-            max: 100,
-            color: AppColors.red,
-            display: '${data.dependenceInt}/100',
-          ),
-          const SizedBox(height: 12),
-          _buildScoreBar(
-            label: 'Confidence ML',
-            value: data
-                .confidence
-                .confidenceFinalPct, // ✅ fix: pakai .confidenceFinalPct
-            max: 100, // ✅ fix: max jadi 100 (bukan 1.0)
-            color: AppColors.teal,
-            display: '${data.confidenceInt}%',
-          ),
-          // ✅ Tampilkan label confidence & zone jika tersedia
-          if (data.confidence.byDistance != null) ...[
-            const SizedBox(height: 10),
-            _buildConfidenceZone(data),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Menampilkan zone Mahalanobis distance jika ada (data dari Flask baru)
-  Widget _buildConfidenceZone(MlResultModel data) {
-    final zone = data.confidence.byDistance?.zone ?? '-';
-    final label = data.confidence.label;
-    return Row(
-      children: [
-        const Icon(
-          Icons.info_outline_rounded,
-          size: 13,
-          color: AppColors.textMuted,
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            'Kepercayaan: $label · $zone',
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScoreBar({
-    required String label,
-    required double value,
-    required double max,
-    required Color color,
-    required String display,
-  }) {
-    final ratio = (value / max).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-            Text(
-              display,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio,
-            backgroundColor: color.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation(color),
-            minHeight: 8,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Trend Card ─────────────────────────────────────────────────────────────
-
-  Widget _buildTrendCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tren Dependensi Digital',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 18),
-          TrendBarChart(),
         ],
       ),
     );
@@ -461,7 +366,7 @@ class HasilPrediksiScreen extends ConsumerWidget {
   Widget _buildHistoriButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
+      height: 56,
       child: ElevatedButton(
         onPressed: () => Navigator.push(
           context,
@@ -471,14 +376,14 @@ class HasilPrediksiScreen extends ConsumerWidget {
           backgroundColor: AppColors.bgCard,
           foregroundColor: AppColors.textPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.cardBorder),
           ),
           elevation: 0,
         ),
         child: const Text(
-          'Lihat Histori Lengkap',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          'Lihat Riwayat Analisis',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
     );

@@ -7,12 +7,17 @@ class ScoreCircle extends StatelessWidget {
   final Color color;
   final double percent;
 
+  final double size;
+  final double fontSize;
+
   const ScoreCircle({
     super.key,
     required this.score,
     required this.label,
     required this.color,
     required this.percent,
+    this.size = 80,
+    this.fontSize = 22,
   });
 
   @override
@@ -20,14 +25,14 @@ class ScoreCircle extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width: 80,
-          height: 80,
+          width: size,
+          height: size,
           child: Stack(
             fit: StackFit.expand,
             children: [
               CircularProgressIndicator(
                 value: percent,
-                strokeWidth: 7,
+                strokeWidth: size * 0.08,
                 backgroundColor: color.withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation(color),
               ),
@@ -36,7 +41,7 @@ class ScoreCircle extends StatelessWidget {
                   score,
                   style: TextStyle(
                     color: color,
-                    fontSize: 22,
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
