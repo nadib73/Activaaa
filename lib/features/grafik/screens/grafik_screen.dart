@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
-import '../../dashboard/models/analytics_model.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
 import '../../profil/screens/profil_screen.dart';
 import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
@@ -38,20 +37,30 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: analytics == null && dashState.isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.teal))
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.teal),
+                      )
                     : SingleChildScrollView(
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
                             _buildPeriodSelector(),
                             const SizedBox(height: 24),
-                            
+
                             // 1. Digital Dependence Trend (Line Chart)
                             _card(
                               title: 'Trend Skor Ketergantungan Digital',
                               child: SimpleLineChart(
-                                values: analytics?.dailyTrend.map((t) => t.dependenceScore).toList() ?? [],
-                                labels: analytics?.dailyTrend.map((t) => t.shortDate).toList() ?? [],
+                                values:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.dependenceScore)
+                                        .toList() ??
+                                    [],
+                                labels:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.shortDate)
+                                        .toList() ??
+                                    [],
                                 color: AppColors.teal,
                                 maxValue: 100,
                               ),
@@ -62,8 +71,16 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
                             _card(
                               title: 'Screen Time Trend (Jam/Hari)',
                               child: SimpleLineChart(
-                                values: analytics?.dailyTrend.map((t) => t.deviceHours).toList() ?? [],
-                                labels: analytics?.dailyTrend.map((t) => t.shortDate).toList() ?? [],
+                                values:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.deviceHours)
+                                        .toList() ??
+                                    [],
+                                labels:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.shortDate)
+                                        .toList() ??
+                                    [],
                                 color: AppColors.blue,
                                 maxValue: 15,
                               ),
@@ -74,8 +91,18 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
                             _card(
                               title: 'Penggunaan Media Sosial (Menit)',
                               child: GenericBarChart(
-                                values: analytics?.dailyTrend.map((t) => t.socialMediaMins.toDouble()).toList() ?? [],
-                                labels: analytics?.dailyTrend.map((t) => t.shortDate).toList() ?? [],
+                                values:
+                                    analytics?.dailyTrend
+                                        .map(
+                                          (t) => t.socialMediaMins.toDouble(),
+                                        )
+                                        .toList() ??
+                                    [],
+                                labels:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.shortDate)
+                                        .toList() ??
+                                    [],
                                 color: AppColors.purple,
                                 maxValue: 500,
                               ),
@@ -86,8 +113,16 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
                             _card(
                               title: 'Sleep Tracking (Jam Tidur)',
                               child: GenericBarChart(
-                                values: analytics?.dailyTrend.map((t) => t.sleepHours).toList() ?? [],
-                                labels: analytics?.dailyTrend.map((t) => t.shortDate).toList() ?? [],
+                                values:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.sleepHours)
+                                        .toList() ??
+                                    [],
+                                labels:
+                                    analytics?.dailyTrend
+                                        .map((t) => t.shortDate)
+                                        .toList() ??
+                                    [],
                                 color: Colors.indigo,
                                 maxValue: 12,
                               ),
@@ -127,13 +162,22 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
         Navigator.popUntil(context, (route) => route.isFirst);
         break;
       case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const KuesionerScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const KuesionerScreen()),
+        );
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LaporanPerkembanganScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LaporanPerkembanganScreen()),
+        );
         break;
       case 4:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfilScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfilScreen()),
+        );
         break;
     }
   }
@@ -146,7 +190,11 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
         children: const [
           Text(
             'Visualisasi Data',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           SizedBox(height: 4),
           Text(
@@ -205,12 +253,25 @@ class _GrafikScreenState extends ConsumerState<GrafikScreen> {
       decoration: BoxDecoration(
         color: AppColors.bgWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 20),
           child,
         ],

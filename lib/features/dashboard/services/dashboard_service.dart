@@ -34,8 +34,9 @@ class DashboardService {
 
   String _handleError(DioException e) {
     final data = e.response?.data;
-    if (data is Map && data['message'] != null)
+    if (data is Map && data['message'] != null) {
       return data['message'].toString();
+    }
     switch (e.response?.statusCode) {
       case 401:
         return 'Sesi habis. Silakan login ulang.';
