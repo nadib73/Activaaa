@@ -27,8 +27,10 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
   @override
   Widget build(BuildContext context) {
     // Tentukan indeks yang ditampilkan (default: data terakhir)
-    final displayIndex = _selectedIndex ?? (widget.values.isNotEmpty ? widget.values.length - 1 : null);
-    
+    final displayIndex =
+        _selectedIndex ??
+        (widget.values.isNotEmpty ? widget.values.length - 1 : null);
+
     return Column(
       children: [
         Row(
@@ -42,8 +44,14 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return GestureDetector(
-                      onPanUpdate: (details) => _handleTouch(details.localPosition, constraints.maxWidth),
-                      onTapDown: (details) => _handleTouch(details.localPosition, constraints.maxWidth),
+                      onPanUpdate: (details) => _handleTouch(
+                        details.localPosition,
+                        constraints.maxWidth,
+                      ),
+                      onTapDown: (details) => _handleTouch(
+                        details.localPosition,
+                        constraints.maxWidth,
+                      ),
                       child: CustomPaint(
                         size: Size.infinite,
                         painter: _LineChartPainter(
@@ -58,9 +66,9 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
                 ),
               ),
             ),
-            
+
             const SizedBox(width: 20),
-            
+
             // Side Info Panel (Keterangan Skor)
             if (displayIndex != null)
               Expanded(
@@ -70,16 +78,27 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
                   children: [
                     Text(
                       'Detail:',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${widget.values[displayIndex].toStringAsFixed(1)}',
-                      style: TextStyle(color: widget.color, fontSize: 18, fontWeight: FontWeight.w800),
+                      widget.values[displayIndex].toStringAsFixed(1),
+                      style: TextStyle(
+                        color: widget.color,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       widget.labels[displayIndex],
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 10),
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),
@@ -92,7 +111,17 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
         // X-Axis Labels
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: widget.labels.map((l) => Text(l, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10))).toList(),
+          children: widget.labels
+              .map(
+                (l) => Text(
+                  l,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              )
+              .toList(),
         ),
       ],
     );
@@ -100,10 +129,13 @@ class _SimpleLineChartState extends State<SimpleLineChart> {
 
   void _handleTouch(Offset localPosition, double maxWidth) {
     if (widget.values.length < 2) return;
-    
+
     final stepX = maxWidth / (widget.values.length - 1);
-    int index = (localPosition.dx / stepX).round().clamp(0, widget.values.length - 1);
-    
+    int index = (localPosition.dx / stepX).round().clamp(
+      0,
+      widget.values.length - 1,
+    );
+
     if (_selectedIndex != index) {
       setState(() {
         _selectedIndex = index;
@@ -149,9 +181,14 @@ class _LineChartPainter extends CustomPainter {
     final path = Path();
     for (int i = 0; i < values.length; i++) {
       final x = i * stepX;
-      final y = size.height - (values[i] / maxValue * size.height).clamp(0, size.height);
-      if (i == 0) path.moveTo(x, y);
-      else path.lineTo(x, y);
+      final y =
+          size.height -
+          (values[i] / maxValue * size.height).clamp(0, size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
 
     canvas.drawPath(path, paint);
@@ -159,12 +196,17 @@ class _LineChartPainter extends CustomPainter {
     // Draw dots
     final dotPaint = Paint()..color = color;
     final bgPaint = Paint()..color = Colors.white;
-    final selectedDotPaint = Paint()..color = color..strokeWidth = 2..style = PaintingStyle.stroke;
+    final selectedDotPaint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
     for (int i = 0; i < values.length; i++) {
       final x = i * stepX;
-      final y = size.height - (values[i] / maxValue * size.height).clamp(0, size.height);
-      
+      final y =
+          size.height -
+          (values[i] / maxValue * size.height).clamp(0, size.height);
+
       final isSelected = i == selectedIndex;
       final radius = isSelected ? 6.0 : 4.0;
 
@@ -179,8 +221,9 @@ class _LineChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LineChartPainter oldDelegate) => 
-    oldDelegate.selectedIndex != selectedIndex || oldDelegate.values != values;
+  bool shouldRepaint(_LineChartPainter oldDelegate) =>
+      oldDelegate.selectedIndex != selectedIndex ||
+      oldDelegate.values != values;
 }
 
 // ── Generic Bar Chart (untuk Sosmed & Sleep) ────────────────────────────────
@@ -208,7 +251,9 @@ class _GenericBarChartState extends State<GenericBarChart> {
   @override
   Widget build(BuildContext context) {
     // Default tampilkan data terakhir
-    final displayIndex = _selectedIndex ?? (widget.values.isNotEmpty ? widget.values.length - 1 : null);
+    final displayIndex =
+        _selectedIndex ??
+        (widget.values.isNotEmpty ? widget.values.length - 1 : null);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +267,10 @@ class _GenericBarChartState extends State<GenericBarChart> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: List.generate(widget.values.length, (i) {
-                final hFactor = (widget.values[i] / widget.maxValue).clamp(0.1, 1.0);
+                final hFactor = (widget.values[i] / widget.maxValue).clamp(
+                  0.1,
+                  1.0,
+                );
                 final isSelected = i == _selectedIndex;
 
                 return Expanded(
@@ -235,9 +283,13 @@ class _GenericBarChartState extends State<GenericBarChart> {
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color: isSelected ? widget.color.withValues(alpha: 0.3) : widget.color.withValues(alpha: 0.1),
+                              color: isSelected
+                                  ? widget.color.withValues(alpha: 0.3)
+                                  : widget.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
-                              border: isSelected ? Border.all(color: widget.color, width: 1.5) : null,
+                              border: isSelected
+                                  ? Border.all(color: widget.color, width: 1.5)
+                                  : null,
                             ),
                             alignment: Alignment.bottomCenter,
                             child: FractionallySizedBox(
@@ -248,14 +300,29 @@ class _GenericBarChartState extends State<GenericBarChart> {
                                 decoration: BoxDecoration(
                                   color: widget.color,
                                   borderRadius: BorderRadius.circular(4),
-                                  boxShadow: isSelected ? [BoxShadow(color: widget.color.withValues(alpha: 0.4), blurRadius: 8)] : null,
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: widget.color.withValues(
+                                              alpha: 0.4,
+                                            ),
+                                            blurRadius: 8,
+                                          ),
+                                        ]
+                                      : null,
                                 ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(widget.labels[i], style: const TextStyle(color: AppColors.textSecondary, fontSize: 9)),
+                        Text(
+                          widget.labels[i],
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 9,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -276,12 +343,20 @@ class _GenericBarChartState extends State<GenericBarChart> {
               children: [
                 Text(
                   'Detail:',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${widget.values[displayIndex].toInt()}',
-                  style: TextStyle(color: widget.color, fontSize: 18, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: widget.color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 Text(
                   widget.labels[displayIndex],
@@ -303,7 +378,12 @@ class DonutChartWidget extends StatelessWidget {
   final int medium;
   final int high;
 
-  const DonutChartWidget({super.key, required this.low, required this.medium, required this.high});
+  const DonutChartWidget({
+    super.key,
+    required this.low,
+    required this.medium,
+    required this.high,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -327,11 +407,18 @@ class DonutChartWidget extends StatelessWidget {
               children: [
                 Text(
                   '$total',
-                  style: const TextStyle(color: AppColors.textDark, fontSize: 22, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const Text(
                   'Total',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ),
@@ -367,12 +454,20 @@ class DonutChartWidget extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(color: AppColors.textDark, fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         Text(
           '$count',
-          style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(width: 4),
         const Text(
@@ -404,7 +499,7 @@ class _DonutPainter extends CustomPainter {
       if (count == 0) return;
       final sweepAngle = (count / total) * 2 * math.pi;
       paint.color = color;
-      
+
       // Draw shadow/background for segment
       final bgPaint = Paint()
         ..color = color.withValues(alpha: 0.1)
@@ -412,7 +507,13 @@ class _DonutPainter extends CustomPainter {
         ..strokeWidth = 16;
       canvas.drawCircle(center, radius - 8, bgPaint);
 
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius - 8), startAngle + 0.05, sweepAngle - 0.1, false, paint);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 8),
+        startAngle + 0.05,
+        sweepAngle - 0.1,
+        false,
+        paint,
+      );
       startAngle += sweepAngle;
     }
 

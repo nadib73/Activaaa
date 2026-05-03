@@ -1,7 +1,10 @@
+// histori_service.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../hasil_prediksi/models/confidence_model.dart'; // ✅ import baru
 import '../../hasil_prediksi/models/ml_result_model.dart';
 
 final historiServiceProvider = Provider<HistoriService>((ref) {
@@ -38,7 +41,7 @@ class HistoriService {
         questionnaireId: 'q8',
         digitalDependenceScore: 60,
         category: 'sedang',
-        confidence: 0.82,
+        confidence: ConfidenceModel.fromJson(0.82), // ✅ fix
         penyebab: ['screen_time_tinggi'],
         rekomendasi: [
           const RecommendationItem(
@@ -56,13 +59,10 @@ class HistoriService {
         questionnaireId: 'q7',
         digitalDependenceScore: 55,
         category: 'sedang',
-        confidence: 0.78,
+        confidence: ConfidenceModel.fromJson(0.78), // ✅ fix
         penyebab: ['tidur_kurang'],
         rekomendasi: [
-          const RecommendationItem(
-            tag: 'sleep',
-            isi: 'Tingkatkan jam tidur',
-          ),
+          const RecommendationItem(tag: 'sleep', isi: 'Tingkatkan jam tidur'),
         ],
         summary: 'Skor cukup — tidur perlu diperbaiki.',
         aiModel: 'mock',
@@ -74,7 +74,7 @@ class HistoriService {
         questionnaireId: 'q6',
         digitalDependenceScore: 58,
         category: 'sedang',
-        confidence: 0.80,
+        confidence: ConfidenceModel.fromJson(0.80), // ✅ fix
         penyebab: ['kurang_olahraga'],
         rekomendasi: [
           const RecommendationItem(
@@ -92,7 +92,7 @@ class HistoriService {
         questionnaireId: 'q5',
         digitalDependenceScore: 35,
         category: 'rendah',
-        confidence: 0.85,
+        confidence: ConfidenceModel.fromJson(0.85), // ✅ fix
         penyebab: [],
         rekomendasi: [
           const RecommendationItem(
@@ -110,8 +110,9 @@ class HistoriService {
 
   String _handleError(DioException e) {
     final data = e.response?.data;
-    if (data is Map && data['message'] != null)
+    if (data is Map && data['message'] != null) {
       return data['message'].toString();
+    }
     switch (e.response?.statusCode) {
       case 401:
         return 'Sesi habis. Silakan login ulang.';
