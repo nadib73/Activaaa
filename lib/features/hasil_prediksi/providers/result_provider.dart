@@ -13,8 +13,8 @@ class ResultState {
 
   const ResultState({
     this.status = ResultStatus.initial,
-    this.latestResult = null,
-    this.errorMessage = null,
+    this.latestResult,
+    this.errorMessage,
   });
 
   bool get isLoading => status == ResultStatus.loading;

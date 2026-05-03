@@ -1,7 +1,10 @@
+// lib/features/hasil_prediksi/services/result_service.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../models/confidence_model.dart'; // ✅ import baru
 import '../models/ml_result_model.dart';
 
 final resultServiceProvider = Provider<ResultService>((ref) {
@@ -15,9 +18,6 @@ class ResultService {
   ResultService(this._client);
 
   // ── Get Hasil Terbaru ──────────────────────────────────────────────────────
-  /// GET /api/prediksi/latest
-  /// Response: { success, data: { id, ml_result, ai_analysis,
-  ///             week_group, questionnaire, created_at } }
   Future<MlResultModel> getLatestResult() async {
     try {
       final response = await _client.get(ApiEndpoints.latestPrediksi);
@@ -34,8 +34,6 @@ class ResultService {
   }
 
   // ── Get Semua Histori ──────────────────────────────────────────────────────
-  /// GET /api/prediksi
-  /// Response: { success, data: [ ...formatResult() ] }
   Future<List<MlResultModel>> getHistory() async {
     try {
       final response = await _client.get(ApiEndpoints.prediksi);
@@ -58,7 +56,7 @@ class ResultService {
       questionnaireId: 'mock_q1',
       digitalDependenceScore: 60,
       category: 'sedang',
-      confidence: 0.82,
+      confidence: ConfidenceModel.fromJson(0.82), // ✅ fix
       penyebab: ['screen_time_tinggi', 'tidur_kurang'],
       rekomendasi: [
         const RecommendationItem(
@@ -74,7 +72,8 @@ class ResultService {
           isi: 'Lakukan olahraga ringan 3x seminggu',
         ),
       ],
-      summary: 'Ketergantungan digital kamu pada level sedang. '
+      summary:
+          'Ketergantungan digital kamu pada level sedang. '
           'Perhatikan waktu layar dan kualitas tidur.',
       aiModel: 'mock',
       weekGroup: '2026-W17',
@@ -90,7 +89,7 @@ class ResultService {
         questionnaireId: 'q8',
         digitalDependenceScore: 60,
         category: 'sedang',
-        confidence: 0.82,
+        confidence: ConfidenceModel.fromJson(0.82), // ✅ fix
         penyebab: ['screen_time_tinggi'],
         rekomendasi: [
           const RecommendationItem(
@@ -108,13 +107,10 @@ class ResultService {
         questionnaireId: 'q7',
         digitalDependenceScore: 55,
         category: 'sedang',
-        confidence: 0.78,
+        confidence: ConfidenceModel.fromJson(0.78), // ✅ fix
         penyebab: ['tidur_kurang'],
         rekomendasi: [
-          const RecommendationItem(
-            tag: 'sleep',
-            isi: 'Tingkatkan jam tidur',
-          ),
+          const RecommendationItem(tag: 'sleep', isi: 'Tingkatkan jam tidur'),
         ],
         summary: 'Skor cukup — tidur perlu diperbaiki.',
         aiModel: 'mock',
@@ -126,7 +122,7 @@ class ResultService {
         questionnaireId: 'q6',
         digitalDependenceScore: 58,
         category: 'sedang',
-        confidence: 0.80,
+        confidence: ConfidenceModel.fromJson(0.80), // ✅ fix
         penyebab: ['kurang_olahraga'],
         rekomendasi: [
           const RecommendationItem(
@@ -144,7 +140,7 @@ class ResultService {
         questionnaireId: 'q5',
         digitalDependenceScore: 35,
         category: 'rendah',
-        confidence: 0.85,
+        confidence: ConfidenceModel.fromJson(0.85), // ✅ fix
         penyebab: [],
         rekomendasi: [
           const RecommendationItem(

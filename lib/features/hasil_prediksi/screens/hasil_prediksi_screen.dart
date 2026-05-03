@@ -1,4 +1,4 @@
-//lib/features/hasil_prediksi/screens/hasil_prediksi_screen.dart
+// lib/features/hasil_prediksi/screens/hasil_prediksi_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +23,6 @@ class HasilPrediksiScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Prioritas: result yang dipass → hasil kuesioner terbaru → fallback mock
     final data =
         result ??
         ref.watch(questionnaireResultProvider) ??
@@ -150,7 +149,10 @@ class HasilPrediksiScreen extends ConsumerWidget {
                 ),
                 Text(
                   'Gaya Hidup Digital Kamu',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -192,7 +194,7 @@ class HasilPrediksiScreen extends ConsumerWidget {
           score: '${data.confidenceInt}%',
           label: 'Confidence',
           color: AppColors.teal,
-          percent: data.confidence,
+          percent: data.confidence.asRatio, // ✅ fix: pakai .asRatio
         ),
       ],
     );
@@ -336,13 +338,42 @@ class HasilPrediksiScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           _buildScoreBar(
             label: 'Confidence ML',
-            value: data.confidence,
-            max: 1.0,
+            value: data
+                .confidence
+                .confidenceFinalPct, // ✅ fix: pakai .confidenceFinalPct
+            max: 100, // ✅ fix: max jadi 100 (bukan 1.0)
             color: AppColors.teal,
             display: '${data.confidenceInt}%',
           ),
+          // ✅ Tampilkan label confidence & zone jika tersedia
+          if (data.confidence.byDistance != null) ...[
+            const SizedBox(height: 10),
+            _buildConfidenceZone(data),
+          ],
         ],
       ),
+    );
+  }
+
+  /// Menampilkan zone Mahalanobis distance jika ada (data dari Flask baru)
+  Widget _buildConfidenceZone(MlResultModel data) {
+    final zone = data.confidence.byDistance?.zone ?? '-';
+    final label = data.confidence.label;
+    return Row(
+      children: [
+        const Icon(
+          Icons.info_outline_rounded,
+          size: 13,
+          color: AppColors.textMuted,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'Kepercayaan: $label · $zone',
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
+        ),
+      ],
     );
   }
 

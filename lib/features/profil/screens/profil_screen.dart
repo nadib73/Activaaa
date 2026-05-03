@@ -40,7 +40,9 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LaporanPerkembanganScreen()),
+          MaterialPageRoute(
+            builder: (context) => const LaporanPerkembanganScreen(),
+          ),
         );
         break;
       case 3:
@@ -117,8 +119,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       Navigator.pushAndRemoveUntil(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, animation, __) => const LoginScreen(),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, animation, _) => const LoginScreen(),
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,

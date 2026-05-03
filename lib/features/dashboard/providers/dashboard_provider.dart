@@ -13,8 +13,8 @@ class DashboardState {
 
   const DashboardState({
     this.status = DashboardStatus.initial,
-    this.analytics = null,
-    this.errorMessage = null,
+    this.analytics,
+    this.errorMessage,
   });
 
   bool get isLoading => status == DashboardStatus.loading;
