@@ -8,6 +8,7 @@ import '../widgets/question_option_card.dart';
 import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
+import '../../hasil_prediksi/providers/result_provider.dart';
 
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB

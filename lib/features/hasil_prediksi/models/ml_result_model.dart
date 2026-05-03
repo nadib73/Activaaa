@@ -27,8 +27,10 @@ class MlResultModel {
   final ConfidenceModel confidence; // ✅ BERUBAH: double → ConfidenceModel
   final List<String> penyebab;
   final List<RecommendationItem> rekomendasi;
+  final String pembukaan; // ← intro dari AI (baru)
   final String summary;
   final String aiModel;
+  final int highRiskFlag; // ← 0 atau 1 (baru)
   final String weekGroup;
   final DateTime createdAt;
 
@@ -41,8 +43,10 @@ class MlResultModel {
     required this.confidence,
     required this.penyebab,
     required this.rekomendasi,
+    required this.pembukaan,
     required this.summary,
     required this.aiModel,
+    required this.highRiskFlag,
     required this.weekGroup,
     required this.createdAt,
   });
@@ -68,8 +72,18 @@ class MlResultModel {
 
   String get monthStr {
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
-      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MEI',
+      'JUN',
+      'JUL',
+      'AGU',
+      'SEP',
+      'OKT',
+      'NOV',
+      'DES',
     ];
     return months[createdAt.month - 1];
   }
@@ -148,10 +162,15 @@ class MlResultModel {
               .toList()
         : <RecommendationItem>[];
 
+    final pembukaan = (aiAnalysis?['pembukaan'] ?? json['pembukaan'] ?? '')
+        .toString();
     final summary = (aiAnalysis?['summary'] ?? json['summary'] ?? '')
         .toString();
     final aiModel = (aiAnalysis?['model'] ?? json['aiModel'] ?? 'unknown')
         .toString();
+    final highRiskFlag = _toInt(
+      mlResult?['high_risk_flag'] ?? json['high_risk_flag'],
+    );
 
     final qId =
         json['questionnaire_id']?.toString() ??
@@ -167,13 +186,21 @@ class MlResultModel {
       confidence: confidence,
       penyebab: penyebab,
       rekomendasi: rekomendasi,
+      pembukaan: pembukaan,
       summary: summary,
       aiModel: aiModel,
+      highRiskFlag: highRiskFlag,
       weekGroup: json['week_group']?.toString() ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
+  }
+
+  static int _toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? 0;
   }
 
   static double _toDouble(dynamic v) {
@@ -190,10 +217,12 @@ class MlResultModel {
     'ml_result': {
       'digital_dependence_score': digitalDependenceScore,
       'category': category,
-      'confidence': confidence.toJson(), // ✅ toJson() dari ConfidenceModel
+      'confidence': confidence.toJson(),
+      'high_risk_flag': highRiskFlag,
     },
     'ai_analysis': {
       'penyebab': penyebab,
+      'pembukaan': pembukaan,
       'rekomendasi': rekomendasi.map((r) => r.toJson()).toList(),
       'summary': summary,
       'model': aiModel,

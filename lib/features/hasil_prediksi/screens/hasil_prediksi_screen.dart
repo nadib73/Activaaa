@@ -49,7 +49,10 @@ class HasilPrediksiScreen extends ConsumerWidget {
                                 _buildRiskBadge(data),
                                 const SizedBox(height: 24),
                                 _buildConfidenceDetail(data),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 24),
+                                if (data.pembukaan.isNotEmpty)
+                                  _buildPembukaanCard(data),
+                                const SizedBox(height: 24),
                                 _buildRekomendasiCard(data),
                                 const SizedBox(height: 24),
                                 _buildHistoriButton(context),
@@ -194,18 +197,20 @@ class HasilPrediksiScreen extends ConsumerWidget {
     final cat = data.category.toLowerCase();
     final isHigh = cat == 'tinggi' || cat == 'high';
     final isMedium = cat == 'sedang' || cat == 'moderate';
-    
-    final color = isHigh 
-        ? AppColors.red 
+
+    final color = isHigh
+        ? AppColors.red
         : (isMedium ? AppColors.amber : AppColors.teal);
-        
+
     final label = isHigh
         ? 'Tinggi — Risiko Ketergantungan'
         : (isMedium ? 'Sedang — Perlu Perhatian' : 'Rendah — Pola Hidup Sehat');
-        
+
     final icon = isHigh
         ? Icons.warning_amber_rounded
-        : (isMedium ? Icons.info_outline_rounded : Icons.check_circle_outline_rounded);
+        : (isMedium
+              ? Icons.info_outline_rounded
+              : Icons.check_circle_outline_rounded);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -290,6 +295,48 @@ class HasilPrediksiScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  // ── Pembukaan AI ───────────────────────────────────────────────────────────
+
+  Widget _buildPembukaanCard(MlResultModel data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.teal.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.teal.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.psychology_rounded, color: AppColors.teal, size: 20),
+              SizedBox(width: 10),
+              Text(
+                'Analisis AI',
+                style: TextStyle(
+                  color: AppColors.teal,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            data.pembukaan,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              height: 1.7,
+            ),
+          ),
         ],
       ),
     );
