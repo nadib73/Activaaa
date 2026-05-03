@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../hasil_prediksi/models/ml_result_model.dart';
 import '../services/histori_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -66,13 +67,14 @@ class HistoriState {
 
 class HistoriNotifier extends StateNotifier<HistoriState> {
   final HistoriService _service;
+  final String? _currentUserId;
 
-  HistoriNotifier(this._service) : super(const HistoriState()) {
+  HistoriNotifier(this._service, [this._currentUserId]) : super(const HistoriState()) {
     fetch();
   }
 
   // ── Fetch histori ──────────────────────────────────────────────────────────
-  Future<void> fetch({bool useMock = true}) async {
+  Future<void> fetch({bool useMock = false}) async {
     state = state.copyWith(status: HistoriStatus.loading, errorMessage: null);
     try {
       // Ganti getMockHistory() → getHistory() saat backend siap
@@ -111,7 +113,8 @@ final historiProvider = StateNotifierProvider<HistoriNotifier, HistoriState>((
   ref,
 ) {
   final service = ref.watch(historiServiceProvider);
-  return HistoriNotifier(service);
+  final user = ref.watch(currentUserProvider);
+  return HistoriNotifier(service, user?.id);
 });
 
 /// Shortcut — cek apakah ada perkembangan positif (untuk banner)

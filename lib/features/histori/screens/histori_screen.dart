@@ -148,7 +148,6 @@ class HistoriScreen extends ConsumerWidget {
               (entry) => _buildMonthSection(entry.key, entry.value),
             ),
             const SizedBox(height: 8),
-            _buildLihatSemua(),
           ],
         ),
       ),
@@ -195,24 +194,6 @@ class HistoriScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
       ],
-    );
-  }
-
-  // ── Lihat Semua ────────────────────────────────────────────────────────────
-
-  Widget _buildLihatSemua() {
-    return Center(
-      child: TextButton(
-        onPressed: () {},
-        child: const Text(
-          'Lihat semua histori ›',
-          style: TextStyle(
-            color: AppColors.teal,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
     );
   }
 

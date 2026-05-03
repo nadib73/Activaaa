@@ -3,6 +3,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../hasil_prediksi/models/ml_result_model.dart';
 import '../../hasil_prediksi/models/confidence_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../histori/providers/histori_provider.dart';
 import '../models/questionnaire_model.dart';
 import '../services/questionnaire_service.dart';
 
@@ -59,8 +61,10 @@ class QuestionnaireState {
 
 class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
   final QuestionnaireService _service;
+  final Ref _ref;
+  final String? _userId;
 
-  QuestionnaireNotifier(this._service)
+  QuestionnaireNotifier(this._service, this._ref, [this._userId])
     : super(QuestionnaireState(form: QuestionnaireModel.empty()));
 
   // ── Setter Q1–Q5 (pilihan → nilai ML) ────────────────────────────────────
@@ -156,6 +160,12 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
         status: QuestionnaireStatus.success,
         result: result,
       );
+
+      // Otomatis tambahkan ke histori agar langsung muncul di list
+      if (result != null) {
+        _ref.read(historiProvider.notifier).addItem(result);
+      }
+
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -245,6 +255,7 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 
     return MlResultModel(
       id: 'local_${now.millisecondsSinceEpoch}',
+      userId: _userId ?? 'local_user',
       questionnaireId: 'q_${now.millisecondsSinceEpoch}',
       digitalDependenceScore: double.parse(dep.toStringAsFixed(1)),
       category: category,
@@ -302,7 +313,8 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 final questionnaireProvider =
     StateNotifierProvider<QuestionnaireNotifier, QuestionnaireState>((ref) {
       final service = ref.watch(questionnaireServiceProvider);
-      return QuestionnaireNotifier(service);
+      final user = ref.watch(currentUserProvider);
+      return QuestionnaireNotifier(service, ref, user?.id);
     });
 
 final questionnaireResultProvider = Provider<MlResultModel?>((ref) {

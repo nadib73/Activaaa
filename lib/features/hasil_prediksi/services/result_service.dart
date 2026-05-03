@@ -20,7 +20,7 @@ class ResultService {
   // ── Get Hasil Terbaru ──────────────────────────────────────────────────────
   Future<MlResultModel> getLatestResult() async {
     try {
-      final response = await _client.get(ApiEndpoints.latestPrediksi);
+      final response = await _client.get(ApiEndpoints.latestSurvey);
       final body = response.data as Map<String, dynamic>;
       final data = body['data'] as Map<String, dynamic>?;
 
@@ -36,7 +36,7 @@ class ResultService {
   // ── Get Semua Histori ──────────────────────────────────────────────────────
   Future<List<MlResultModel>> getHistory() async {
     try {
-      final response = await _client.get(ApiEndpoints.prediksi);
+      final response = await _client.get(ApiEndpoints.surveys);
       final body = response.data as Map<String, dynamic>;
       final list = body['data'] as List? ?? [];
       return list
@@ -53,6 +53,7 @@ class ResultService {
     await Future.delayed(const Duration(milliseconds: 800));
     return MlResultModel(
       id: 'mock_r1',
+      userId: 'mock_001',
       questionnaireId: 'mock_q1',
       digitalDependenceScore: 60,
       category: 'sedang',
@@ -86,6 +87,7 @@ class ResultService {
     return [
       MlResultModel(
         id: 'r8',
+        userId: 'mock_001',
         questionnaireId: 'q8',
         digitalDependenceScore: 60,
         category: 'sedang',
@@ -104,6 +106,7 @@ class ResultService {
       ),
       MlResultModel(
         id: 'r7',
+        userId: 'mock_001',
         questionnaireId: 'q7',
         digitalDependenceScore: 55,
         category: 'sedang',
@@ -119,6 +122,7 @@ class ResultService {
       ),
       MlResultModel(
         id: 'r6',
+        userId: 'mock_001',
         questionnaireId: 'q6',
         digitalDependenceScore: 58,
         category: 'sedang',
@@ -137,6 +141,7 @@ class ResultService {
       ),
       MlResultModel(
         id: 'r5',
+        userId: 'mock_001',
         questionnaireId: 'q5',
         digitalDependenceScore: 35,
         category: 'rendah',

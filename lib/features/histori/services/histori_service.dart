@@ -21,7 +21,7 @@ class HistoriService {
   /// GET /api/prediksi
   Future<List<MlResultModel>> getHistory() async {
     try {
-      final response = await _client.get(ApiEndpoints.prediksi);
+      final response = await _client.get(ApiEndpoints.surveys);
       final data = response.data as Map<String, dynamic>;
       final list = data['data'] as List? ?? [];
       return list
@@ -38,6 +38,7 @@ class HistoriService {
     return [
       MlResultModel(
         id: 'r8',
+        userId: 'mock_001',
         questionnaireId: 'q8',
         digitalDependenceScore: 60,
         category: 'sedang',
@@ -56,6 +57,7 @@ class HistoriService {
       ),
       MlResultModel(
         id: 'r7',
+        userId: 'mock_001',
         questionnaireId: 'q7',
         digitalDependenceScore: 55,
         category: 'sedang',
@@ -71,6 +73,7 @@ class HistoriService {
       ),
       MlResultModel(
         id: 'r6',
+        userId: 'mock_001',
         questionnaireId: 'q6',
         digitalDependenceScore: 58,
         category: 'sedang',
@@ -89,6 +92,7 @@ class HistoriService {
       ),
       MlResultModel(
         id: 'r5',
+        userId: 'mock_001',
         questionnaireId: 'q5',
         digitalDependenceScore: 35,
         category: 'rendah',
