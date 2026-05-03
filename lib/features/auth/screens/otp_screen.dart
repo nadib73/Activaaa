@@ -40,8 +40,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -93,7 +97,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
     final email = ref.read(forgotPasswordProvider).email;
     // Kosongkan semua kotak
-    for (final c in _controllers) c.clear();
+    for (final c in _controllers) {
+      c.clear();
+    }
     _focusNodes[0].requestFocus();
 
     final success = await ref

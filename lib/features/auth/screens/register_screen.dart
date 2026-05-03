@@ -164,8 +164,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   String? _validateNama(String value) {
     if (value.isEmpty) return 'Nama lengkap wajib diisi';
     if (value.length < 3) return 'Nama minimal 3 karakter';
-    if (RegExp(r'[0-9]').hasMatch(value))
+    if (RegExp(r'[0-9]').hasMatch(value)) {
       return 'Nama tidak boleh mengandung angka';
+    }
     return null;
   }
 
@@ -178,10 +179,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   String? _validatePassword(String value) {
     if (value.isEmpty) return 'Password wajib diisi';
     if (value.length < 8) return 'Password minimal 8 karakter';
-    if (!RegExp(r'[A-Z]').hasMatch(value))
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
       return 'Harus mengandung huruf besar';
-    if (!RegExp(r'[a-z]').hasMatch(value))
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
       return 'Harus mengandung huruf kecil';
+    }
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'Harus mengandung angka';
     return null;
   }
