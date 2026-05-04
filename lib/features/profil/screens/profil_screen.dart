@@ -5,7 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
-import '../widgets/stats_row.dart';
+
 import '../widgets/setting_item.dart';
 import '../widgets/setting_item_toggle.dart';
 import '../../grafik/screens/grafik_screen.dart';
@@ -175,33 +175,28 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            _buildProfileHeader(user),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildProfileHeader(user),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.bgLight,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(28),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            StatsRow(),
-                            const SizedBox(height: 24),
-                            _buildPengaturanSection(),
-                            const SizedBox(height: 20),
-                            _buildKeluarButton(),
-                          ],
-                        ),
-                      ),
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: AppColors.bgLight,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPengaturanSection(),
+                        const SizedBox(height: 20),
+                        _buildKeluarButton(),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

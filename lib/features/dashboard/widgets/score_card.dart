@@ -19,9 +19,15 @@ class ScoreCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: AppColors.bgWhite,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,7 +35,7 @@ class ScoreCard extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.textMuted,
                 fontSize: 11,
                 height: 1.4,
               ),
@@ -49,7 +55,7 @@ class ScoreCard extends StatelessWidget {
                   const TextSpan(
                     text: '/100',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textMuted,
                       fontSize: 11,
                     ),
                   ),

@@ -4,8 +4,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
+import 'dart:ui';
 import '../widgets/score_card.dart';
-import '../widgets/focus_bar_chart.dart';
+import '../../histori/providers/histori_provider.dart';
 import '../../kuisioner/screens/kuesioner_screen.dart';
 import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
@@ -25,36 +26,41 @@ class DashboardScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
+            _buildHeader(user),
             Expanded(
-              child: RefreshIndicator(
-                color: AppColors.teal,
-                onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(user),
-                      const SizedBox(height: 20),
-                      // Loading state
-                      if (dashState.isLoading && analytics == null)
-                        _buildLoadingShimmer()
-                      else ...[
-                        _buildScoreCards(analytics),
-                        const SizedBox(height: 16),
-                        _buildInsightCard(analytics),
-                        const SizedBox(height: 20),
-                        _buildSectionLabel('TREN 7 HARI'),
-                        const SizedBox(height: 14),
-                        _buildFocusChartCard(analytics),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.bgLight,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: RefreshIndicator(
+                  color: AppColors.teal,
+                  onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Loading state
+                        if (dashState.isLoading && analytics == null)
+                          _buildLoadingShimmer()
+                        else ...[
+                          _buildScoreCards(ref),
+                          const SizedBox(height: 16),
+                          _buildInsightCard(analytics),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-            BottomNav(currentIndex: 0, onTap: (i) => _onNavTap(context, i)),
+            BottomNav(
+              currentIndex: 0,
+              navTheme: NavTheme.light,
+              onTap: (i) => _onNavTap(context, i),
+            ),
           ],
         ),
       ),
@@ -108,56 +114,90 @@ class DashboardScreen extends ConsumerWidget {
         ? 'Selamat sore,'
         : 'Selamat malam,';
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              greeting,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                greeting,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                name,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.teal,
+            child: Text(
+              initials,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              name,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.teal,
-          child: Text(
-            initials,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   // ── Score Cards ────────────────────────────────────────────────────────────
 
-  Widget _buildScoreCards(analytics) {
-    final dep = analytics?.avgDependenceScore != null
-        ? analytics!.avgDependenceScore.round().toString()
-        : '--';
+  Widget _buildScoreCards(WidgetRef ref) {
+    final historiState = ref.watch(historiProvider);
+    final hasData = historiState.items.isNotEmpty;
+    final value = hasData ? historiState.items.first.digitalDependenceScore.round().toString() : '0';
 
-    return Row(
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        ScoreCard(label: 'Skor\nDependensi', value: dep, color: AppColors.red),
+        Row(
+          children: [
+            ScoreCard(
+              label: 'Skor\nDependensi', 
+              value: value, 
+              color: hasData ? AppColors.red : AppColors.textMuted,
+            ),
+          ],
+        ),
+        if (!hasData)
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                child: Container(
+                  color: AppColors.bgDark.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+          ),
+        if (!hasData)
+          const Text(
+            'Silakan isi kuesioner\nuntuk melihat skor',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
       ],
     );
   }
@@ -176,22 +216,28 @@ class DashboardScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: AppColors.bgWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Insight minggu ini',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
           ),
           const SizedBox(height: 8),
           Text(
             insightText,
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.textDark,
               fontSize: 15,
               height: 1.5,
               fontWeight: FontWeight.w500,
@@ -237,73 +283,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  // ── Section Label ──────────────────────────────────────────────────────────
 
-  Widget _buildSectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-
-  // ── Dependence Chart ────────────────────────────────────────────────────────
-
-  Widget _buildFocusChartCard(analytics) {
-    final changeLabel = analytics?.dependenceChangeLabelFormatted ?? '';
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Skor Dependensi',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-              if (changeLabel.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.teal.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    changeLabel,
-                    style: const TextStyle(
-                      color: AppColors.tealLight,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const FocusBarChart(),
-        ],
-      ),
-    );
-  }
 
   // ── Loading Shimmer ────────────────────────────────────────────────────────
 

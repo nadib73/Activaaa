@@ -10,6 +10,11 @@ import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
 import '../../hasil_prediksi/providers/result_provider.dart';
 
+import '../../../shared/widgets/bottom_nav.dart';
+import '../../profil/screens/profil_screen.dart';
+import '../../grafik/screens/grafik_screen.dart';
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
+
 // true  = hitung lokal (backend belum siap)
 // false = kirim ke Laravel → data masuk MongoDB
 const bool _useMockSurvey = false;
@@ -43,6 +48,36 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
+
+  void _onNavTap(int index) {
+    if (index == 1) return; // Sudah di Kuesioner
+
+    switch (index) {
+      case 0:
+        Navigator.popUntil(context, (route) => route.isFirst);
+        break;
+      case 2:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LaporanPerkembanganScreen(),
+          ),
+        );
+        break;
+      case 3:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const GrafikScreen()),
+        );
+        break;
+      case 4:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfilScreen()),
+        );
+        break;
+    }
+  }
 
   void _startNew() {
     setState(() => _showSelection = false);
@@ -220,68 +255,98 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
 
   Widget _buildSelectionView() {
     return Scaffold(
-      backgroundColor: AppColors.bgWhite,
+      backgroundColor: AppColors.bgDark,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              _backButton(),
-              const SizedBox(height: 32),
-              const Text(
-                'Kuesioner Analisis',
-                style: TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 20, 20),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kuesioner Analisis',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Pilih opsi di bawah',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: AppColors.bgLight,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _selectionCard(
+                        title: 'Mulai Kuesioner Baru',
+                        desc: 'Lakukan analisis kondisi terbaru kamu hari ini.',
+                        icon: Icons.assignment_outlined,
+                        color: AppColors.teal,
+                        onTap: _startNew,
+                      ),
+                      const SizedBox(height: 20),
+                      _selectionCard(
+                        title: 'Lihat Hasil Terakhir',
+                        desc:
+                            'Cek rangkuman dan rekomendasi kuesioner sebelumnya.',
+                        icon: Icons.history_outlined,
+                        color: AppColors.blue,
+                        onTap: _viewLatest,
+                        isLoading: _isFetchingLatest,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Pilih opsi di bawah untuk melanjutkan pemantauan aktivitas digitalmu.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 15),
-              ),
-              const SizedBox(height: 48),
-              _selectionCard(
-                title: 'Mulai Kuesioner Baru',
-                desc: 'Lakukan analisis kondisi terbaru kamu hari ini.',
-                icon: Icons.assignment_outlined,
-                color: AppColors.teal,
-                onTap: _startNew,
-              ),
-              const SizedBox(height: 20),
-              _selectionCard(
-                title: 'Lihat Hasil Terakhir',
-                desc: 'Cek rangkuman dan rekomendasi kuesioner sebelumnya.',
-                icon: Icons.history_outlined,
-                color: AppColors.blue,
-                onTap: _viewLatest,
-                isLoading: _isFetchingLatest,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _backButton() {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.bgLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.lightBorder),
-        ),
-        child: const Icon(
-          Icons.arrow_back_rounded,
-          color: AppColors.textDark,
-          size: 20,
+            ),
+            BottomNav(
+              currentIndex: 1,
+              navTheme: NavTheme.light,
+              onTap: _onNavTap,
+            ),
+          ],
         ),
       ),
     );

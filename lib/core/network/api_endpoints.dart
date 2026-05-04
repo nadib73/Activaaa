@@ -8,9 +8,13 @@ class ApiEndpoints {
   // Contoh: 'http://192.168.1.x:8000/api'
   // Setelah deploy: 'https://nama-app.up.railway.app/api'
   // static const String baseUrl = 'http://192.168.0.21:8000/api';
+<<<<<<< HEAD
 
   static const String baseUrl = 'http://192.168.0.3:8000/api';
 
+=======
+  static const String baseUrl = 'http://192.168.1.35:8000/api';
+>>>>>>> fe1289018ee6d6d71a730d0c3bc91b01ac0a5dc2
   // ── Auth (PUBLIC — tanpa token) ────────────────────────────────────────────
   static const String register = '/auth/register';
   static const String login = '/auth/login';
