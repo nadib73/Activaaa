@@ -9,6 +9,7 @@ import '../widgets/question_slider.dart';
 import '../widgets/question_scale_picker.dart';
 import '../../hasil_prediksi/screens/hasil_prediksi_screen.dart';
 import '../../hasil_prediksi/providers/result_provider.dart';
+
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../profil/screens/profil_screen.dart';
 import '../../grafik/screens/grafik_screen.dart';
@@ -270,9 +271,15 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -290,7 +297,10 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
                       SizedBox(height: 4),
                       Text(
                         'Pilih opsi di bawah',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -319,7 +329,8 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
                       const SizedBox(height: 20),
                       _selectionCard(
                         title: 'Lihat Hasil Terakhir',
-                        desc: 'Cek rangkuman dan rekomendasi kuesioner sebelumnya.',
+                        desc:
+                            'Cek rangkuman dan rekomendasi kuesioner sebelumnya.',
                         icon: Icons.history_outlined,
                         color: AppColors.blue,
                         onTap: _viewLatest,

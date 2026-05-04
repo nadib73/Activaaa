@@ -205,64 +205,86 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 
     if (f.socialMediaMinutes > 120) {
       penyebab.add('screen_time_tinggi');
-      rekomendasi.add(RecommendationItem(
-        tag: 'social_media',
-        isi: 'Kurangi media sosial — kamu menggunakannya '
-            '${(f.socialMediaMinutes / 60).toStringAsFixed(1)} jam/hari. Targetkan max 1 jam.',
-      ));
+      rekomendasi.add(
+        RecommendationItem(
+          tag: 'social_media',
+          isi:
+              'Kurangi media sosial — kamu menggunakannya '
+              '${(f.socialMediaMinutes / 60).toStringAsFixed(1)} jam/hari. Targetkan max 1 jam.',
+        ),
+      );
     }
     if (f.notificationsPerDay > 300) {
       penyebab.add('notifikasi_berlebihan');
-      rekomendasi.add(RecommendationItem(
-        tag: 'notifications',
-        isi: 'Matikan notifikasi tidak penting. '
-            'Kamu menerima sekitar ${f.notificationsPerDay} notif/hari.',
-      ));
+      rekomendasi.add(
+        RecommendationItem(
+          tag: 'notifications',
+          isi:
+              'Matikan notifikasi tidak penting. '
+              'Kamu menerima sekitar ${f.notificationsPerDay} notif/hari.',
+        ),
+      );
     }
     if (f.sleepHours < 7) {
       penyebab.add('tidur_kurang');
-      rekomendasi.add(RecommendationItem(
-        tag: 'sleep',
-        isi: 'Tidur minimal 7–8 jam/malam. '
-            'Saat ini ${f.sleepHours.toStringAsFixed(1)} jam kurang optimal.',
-      ));
+      rekomendasi.add(
+        RecommendationItem(
+          tag: 'sleep',
+          isi:
+              'Tidur minimal 7–8 jam/malam. '
+              'Saat ini ${f.sleepHours.toStringAsFixed(1)} jam kurang optimal.',
+        ),
+      );
     }
     if (f.physicalActivityDays < 3) {
       penyebab.add('kurang_olahraga');
-      rekomendasi.add(RecommendationItem(
-        tag: 'exercise',
-        isi: 'Olahraga minimal 3x/minggu. '
-            'Aktivitas fisik terbukti meningkatkan fokus dan produktivitas.',
-      ));
+      rekomendasi.add(
+        RecommendationItem(
+          tag: 'exercise',
+          isi:
+              'Olahraga minimal 3x/minggu. '
+              'Aktivitas fisik terbukti meningkatkan fokus dan produktivitas.',
+        ),
+      );
     }
     if (f.stressLevel >= 7) {
       penyebab.add('stress_tinggi');
-      rekomendasi.add(RecommendationItem(
-        tag: 'stress',
-        isi: 'Stresmu cukup tinggi. Coba meditasi 10 menit/hari atau teknik deep breathing.',
-      ));
+      rekomendasi.add(
+        RecommendationItem(
+          tag: 'stress',
+          isi:
+              'Stresmu cukup tinggi. Coba meditasi 10 menit/hari atau teknik deep breathing.',
+        ),
+      );
     }
     if (rekomendasi.isEmpty) {
-      rekomendasi.add(const RecommendationItem(
-        tag: 'general',
-        isi: 'Gaya hidup digitalmu sudah cukup baik! Pertahankan kebiasaan positif ini.',
-      ));
+      rekomendasi.add(
+        const RecommendationItem(
+          tag: 'general',
+          isi:
+              'Gaya hidup digitalmu sudah cukup baik! Pertahankan kebiasaan positif ini.',
+        ),
+      );
     }
 
     final now = DateTime.now();
-    final weekNum = ((now.difference(DateTime(now.year, 1, 1)).inDays) / 7).ceil();
+    final weekNum = ((now.difference(DateTime(now.year, 1, 1)).inDays) / 7)
+        .ceil();
     final weekGroup = '${now.year}-W${weekNum.toString().padLeft(2, '0')}';
 
     return MlResultModel(
-      id: 'local_${now.millisecondsSinceEpoch}',
+      id: 'local_\${now.millisecondsSinceEpoch}',
       userId: _userId ?? 'local_user',
-      questionnaireId: 'q_${now.millisecondsSinceEpoch}',
+      questionnaireId: 'q_\${now.millisecondsSinceEpoch}',
       digitalDependenceScore: double.parse(dep.toStringAsFixed(1)),
       category: category,
       confidence: ConfidenceModel.fromJson(confidence),
       penyebab: penyebab,
       rekomendasi: rekomendasi.take(4).toList(),
-      summary: 'Skor ketergantungan digital kamu: ${dep.toStringAsFixed(0)} ($category).',
+      pembukaan: '',
+      highRiskFlag: dep >= 70 ? 1 : 0,
+      summary:
+          'Skor ketergantungan digital kamu: \${dep.toStringAsFixed(0)} ($category).',
       aiModel: 'mock',
       weekGroup: weekGroup,
       createdAt: now,
@@ -271,7 +293,10 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
 
   // ── Fetch Latest ────────────────────────────────────────────────────────────
   Future<MlResultModel?> fetchLatestResult() async {
-    state = state.copyWith(status: QuestionnaireStatus.loading, errorMessage: null);
+    state = state.copyWith(
+      status: QuestionnaireStatus.loading,
+      errorMessage: null,
+    );
     try {
       final data = await _service.getLatest();
       if (data == null) {
@@ -288,14 +313,20 @@ class QuestionnaireNotifier extends StateNotifier<QuestionnaireState> {
           mlJson['questionnaire'] = data['questionnaire'];
         }
         final result = MlResultModel.fromJson(mlJson);
-        state = state.copyWith(status: QuestionnaireStatus.success, result: result);
+        state = state.copyWith(
+          status: QuestionnaireStatus.success,
+          result: result,
+        );
         return result;
       }
-      
+
       state = state.copyWith(status: QuestionnaireStatus.initial);
       return null;
     } catch (e) {
-      state = state.copyWith(status: QuestionnaireStatus.error, errorMessage: e.toString());
+      state = state.copyWith(
+        status: QuestionnaireStatus.error,
+        errorMessage: e.toString(),
+      );
       return null;
     }
   }

@@ -27,6 +27,12 @@ class ResultService {
       if (data == null) {
         throw 'Belum ada hasil prediksi. Isi kuesioner terlebih dahulu.';
       }
+      // Response Laravel: { questionnaire: {...}, ml_result: {...} }
+      // MlResultModel.fromJson sudah handle nested ml_result + ai_analysis
+      final mlJson = data['ml_result'] as Map<String, dynamic>?;
+      if (mlJson == null) {
+        throw 'Belum ada hasil prediksi. Isi kuesioner terlebih dahulu.';
+      }
       return MlResultModel.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -73,6 +79,8 @@ class ResultService {
           isi: 'Lakukan olahraga ringan 3x seminggu',
         ),
       ],
+      pembukaan: '',
+      highRiskFlag: 0,
       summary:
           'Ketergantungan digital kamu pada level sedang. '
           'Perhatikan waktu layar dan kualitas tidur.',
@@ -99,6 +107,8 @@ class ResultService {
             isi: 'Kurangi social media 30 menit per hari',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor sedang — perlu perhatian pada media sosial.',
         aiModel: 'mock',
         weekGroup: '2026-W14',
@@ -115,6 +125,8 @@ class ResultService {
         rekomendasi: [
           const RecommendationItem(tag: 'sleep', isi: 'Tingkatkan jam tidur'),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor cukup — tidur perlu diperbaiki.',
         aiModel: 'mock',
         weekGroup: '2026-W13',
@@ -134,6 +146,8 @@ class ResultService {
             isi: 'Olahraga 3x seminggu',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor sedang — aktivitas fisik kurang.',
         aiModel: 'mock',
         weekGroup: '2026-W12',
@@ -153,6 +167,8 @@ class ResultService {
             isi: 'Pertahankan kebiasaan positif!',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor rendah — gaya hidup digital sudah baik.',
         aiModel: 'mock',
         weekGroup: '2026-W11',

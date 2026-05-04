@@ -42,7 +42,7 @@ class HistoriService {
         questionnaireId: 'q8',
         digitalDependenceScore: 60,
         category: 'sedang',
-        confidence: ConfidenceModel.fromJson(0.82), // ✅ fix
+        confidence: ConfidenceModel.fromJson(0.82),
         penyebab: ['screen_time_tinggi'],
         rekomendasi: [
           const RecommendationItem(
@@ -50,6 +50,8 @@ class HistoriService {
             isi: 'Kurangi social media 30 menit per hari',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor sedang — perhatikan media sosial.',
         aiModel: 'mock',
         weekGroup: '2026-W14',
@@ -61,11 +63,13 @@ class HistoriService {
         questionnaireId: 'q7',
         digitalDependenceScore: 55,
         category: 'sedang',
-        confidence: ConfidenceModel.fromJson(0.78), // ✅ fix
+        confidence: ConfidenceModel.fromJson(0.78),
         penyebab: ['tidur_kurang'],
         rekomendasi: [
           const RecommendationItem(tag: 'sleep', isi: 'Tingkatkan jam tidur'),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor cukup — tidur perlu diperbaiki.',
         aiModel: 'mock',
         weekGroup: '2026-W13',
@@ -77,7 +81,7 @@ class HistoriService {
         questionnaireId: 'q6',
         digitalDependenceScore: 58,
         category: 'sedang',
-        confidence: ConfidenceModel.fromJson(0.80), // ✅ fix
+        confidence: ConfidenceModel.fromJson(0.80),
         penyebab: ['kurang_olahraga'],
         rekomendasi: [
           const RecommendationItem(
@@ -85,6 +89,8 @@ class HistoriService {
             isi: 'Olahraga 3x seminggu',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor sedang — aktivitas fisik kurang.',
         aiModel: 'mock',
         weekGroup: '2026-W12',
@@ -96,7 +102,7 @@ class HistoriService {
         questionnaireId: 'q5',
         digitalDependenceScore: 35,
         category: 'rendah',
-        confidence: ConfidenceModel.fromJson(0.85), // ✅ fix
+        confidence: ConfidenceModel.fromJson(0.85),
         penyebab: [],
         rekomendasi: [
           const RecommendationItem(
@@ -104,6 +110,8 @@ class HistoriService {
             isi: 'Pertahankan kebiasaan positif!',
           ),
         ],
+        pembukaan: '',
+        highRiskFlag: 0,
         summary: 'Skor rendah — gaya hidup digital sudah baik.',
         aiModel: 'mock',
         weekGroup: '2026-W11',
