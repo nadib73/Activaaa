@@ -186,7 +186,13 @@ class _LaporanPerkembanganScreenState extends ConsumerState<LaporanPerkembanganS
       decoration: BoxDecoration(
         color: AppColors.bgWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -227,7 +233,13 @@ class _LaporanPerkembanganScreenState extends ConsumerState<LaporanPerkembanganS
           decoration: BoxDecoration(
             color: AppColors.bgWhite,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.lightBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -304,7 +316,13 @@ class _LaporanPerkembanganScreenState extends ConsumerState<LaporanPerkembanganS
       decoration: BoxDecoration(
         color: AppColors.bgWhite,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

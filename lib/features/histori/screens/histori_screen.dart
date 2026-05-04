@@ -8,6 +8,8 @@ import '../widgets/perkembangan_card.dart';
 import '../models/analisis_data.dart';
 import '../../grafik/screens/grafik_screen.dart';
 import '../../profil/screens/profil_screen.dart';
+import '../../kuisioner/screens/kuesioner_screen.dart';
+import '../../laporan_perkembangan/screens/laporan_perkembangan_screen.dart';
 
 class HistoriScreen extends ConsumerWidget {
   const HistoriScreen({super.key});
@@ -18,10 +20,11 @@ class HistoriScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
+      endDrawer: const _FilterDrawer(),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context),
+            _buildHeader(context, ref),
             Expanded(child: _buildBody(context, ref, state)),
             BottomNav(
               currentIndex: 1,
@@ -37,18 +40,26 @@ class HistoriScreen extends ConsumerWidget {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   void _onNavTap(BuildContext context, int index) {
+    if (index == 1) return; // Sudah di tab Kuesioner (Histori)
+
     switch (index) {
       case 0:
         Navigator.popUntil(context, (route) => route.isFirst);
         break;
       case 2:
-        Navigator.push(
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LaporanPerkembanganScreen()),
+        );
+        break;
+      case 3:
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const GrafikScreen()),
         );
         break;
-      case 3:
-        Navigator.push(
+      case 4:
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const ProfilScreen()),
         );
@@ -58,56 +69,93 @@ class HistoriScreen extends ConsumerWidget {
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
     return Container(
       color: AppColors.bgLight,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+      padding: const EdgeInsets.fromLTRB(16, 20, 20, 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                'Histori Analisis',
-                style: TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
+              GestureDetector(
+                onTap: () {
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgWhite,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.lightBorder),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark, size: 20),
                 ),
               ),
-              SizedBox(height: 2),
-              Text(
-                'Semua hasil kuesioner kamu',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              const SizedBox(width: 16),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Histori Analisis',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Semua kuesioner',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
               ),
             ],
           ),
-          _buildFilterButton(),
+          _buildFilterButton(context, ref),
         ],
       ),
     );
   }
 
-  Widget _buildFilterButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.bgWhite,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.lightBorder),
-      ),
-      child: const Text(
-        'Filter',
-        style: TextStyle(
-          color: AppColors.textDark,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+  Widget _buildFilterButton(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(historiProvider);
+    final hasActiveFilter = state.filterCategory != HistoriFilterCategory.semua || state.sortOption != HistoriSortOption.terbaru;
+    
+    return Builder(
+      builder: (innerContext) {
+        return GestureDetector(
+          onTap: () {
+            Scaffold.of(innerContext).openEndDrawer();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: hasActiveFilter ? AppColors.teal.withValues(alpha: 0.1) : AppColors.bgWhite,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: hasActiveFilter ? AppColors.teal : AppColors.lightBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.filter_list_rounded, size: 16, color: hasActiveFilter ? AppColors.teal : AppColors.textDark),
+                const SizedBox(width: 6),
+                Text(
+                  'Filter',
+                  style: TextStyle(
+                    color: hasActiveFilter ? AppColors.teal : AppColors.textDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
-
   // ── Body ───────────────────────────────────────────────────────────────────
 
   Widget _buildBody(BuildContext context, WidgetRef ref, HistoriState state) {
@@ -130,6 +178,27 @@ class HistoriScreen extends ConsumerWidget {
 
     // Success — tampilkan list
     final grouped = state.groupedByMonth;
+
+    if (grouped.isEmpty && !state.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text(
+              'Tidak ada hasil yang sesuai',
+              style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Coba ubah filter atau urutan',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       color: AppColors.teal,
@@ -257,6 +326,101 @@ class HistoriScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FilterDrawer extends ConsumerWidget {
+  const _FilterDrawer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(historiProvider);
+    final notifier = ref.read(historiProvider.notifier);
+
+    return Drawer(
+      backgroundColor: AppColors.bgWhite,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Urutkan & Filter',
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  )
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text('Urutkan Berdasarkan', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildSortChip('Terbaru', HistoriSortOption.terbaru, state, notifier),
+                  _buildSortChip('Terlama', HistoriSortOption.terlama, state, notifier),
+                  _buildSortChip('Skor Tertinggi', HistoriSortOption.skorTertinggi, state, notifier),
+                  _buildSortChip('Skor Terendah', HistoriSortOption.skorTerendah, state, notifier),
+                ],
+              ),
+              const SizedBox(height: 32),
+              const Text('Kategori', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildFilterChip('Semua', HistoriFilterCategory.semua, state, notifier),
+                  _buildFilterChip('Rendah', HistoriFilterCategory.rendah, state, notifier),
+                  _buildFilterChip('Sedang', HistoriFilterCategory.sedang, state, notifier),
+                  _buildFilterChip('Tinggi', HistoriFilterCategory.tinggi, state, notifier),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortChip(String label, HistoriSortOption option, HistoriState state, HistoriNotifier notifier) {
+    final isSelected = state.sortOption == option;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: AppColors.teal,
+      labelStyle: TextStyle(color: isSelected ? Colors.white : AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
+      backgroundColor: AppColors.bgLight,
+      showCheckmark: false,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isSelected ? AppColors.teal : AppColors.lightBorder)),
+      onSelected: (selected) {
+        if (selected) notifier.setSortOption(option);
+      },
+    );
+  }
+
+  Widget _buildFilterChip(String label, HistoriFilterCategory category, HistoriState state, HistoriNotifier notifier) {
+    final isSelected = state.filterCategory == category;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: AppColors.blue,
+      labelStyle: TextStyle(color: isSelected ? Colors.white : AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
+      backgroundColor: AppColors.bgLight,
+      showCheckmark: false,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isSelected ? AppColors.blue : AppColors.lightBorder)),
+      onSelected: (selected) {
+        if (selected) notifier.setFilterCategory(category);
+      },
     );
   }
 }
