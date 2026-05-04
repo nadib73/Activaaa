@@ -89,19 +89,23 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
     if (existingResult != null && !_isFetchingLatest) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: existingResult)),
+        MaterialPageRoute(
+          builder: (_) => HasilPrediksiScreen(result: existingResult),
+        ),
       );
       return;
     }
 
     setState(() => _isFetchingLatest = true);
-    final result = await ref.read(questionnaireProvider.notifier).fetchLatestResult();
+    final result = await ref
+        .read(questionnaireProvider.notifier)
+        .fetchLatestResult();
     setState(() => _isFetchingLatest = false);
 
     if (result != null && mounted) {
       // Sync ke resultProvider juga
       ref.read(resultProvider.notifier).setResult(result);
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => HasilPrediksiScreen(result: result)),
@@ -132,7 +136,9 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
     if (!isPageValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Mohon isi semua pertanyaan di halaman ini sebelum lanjut.'),
+          content: Text(
+            'Mohon isi semua pertanyaan di halaman ini sebelum lanjut.',
+          ),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 2),
@@ -385,7 +391,11 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
                   const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -394,7 +404,10 @@ class _KuesionerScreenState extends ConsumerState<KuesionerScreen> {
               const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textMuted,
+                ),
               )
             else
               Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
@@ -985,7 +998,8 @@ class _PageKondisiMental extends ConsumerWidget {
           // Q9 — Anxiety (0–27, invertColor: tinggi = merah)
           _QuestionBlock(
             number: 9,
-            question: 'Seberapa sering kamu merasa cemas atau gelisah hari ini?',
+            question:
+                'Seberapa sering kamu merasa cemas atau gelisah hari ini?',
             hint: '0 = tidak pernah cemas, 27 = sangat sering cemas',
             child: QuestionScalePicker(
               value: form.anxietyScore,
